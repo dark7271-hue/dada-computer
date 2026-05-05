@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>硬體管理</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h1 class="mb-4">硬體管理</h1>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <form id="itemForm" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">日期</label>
+            <input type="date" name="date" class="form-control" required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">硬體名稱</label>
+            <input type="text" name="name" class="form-control" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">取得成本</label>
+            <input type="number" step="0.01" name="cost" class="form-control" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">預估售價</label>
+            <input type="number" step="0.01" name="expected" class="form-control" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">實際售價</label>
+            <input type="number" step="0.01" name="actual" class="form-control" />
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">新增</button>
+            <button id="refreshBtn" type="button" class="btn btn-outline-secondary ms-2">重新整理</button>
+            <span id="msg" class="ms-3 text-success"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table id="dataTable" class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>日期</th>
+                <th>硬體名稱</th>
+                <th>取得成本</th>
+                <th>預估售價</th>
+                <th>實際售價</th>
+                <th>總成本</th>
+                <th>預計利潤</th>
+                <th>實際利潤</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot class="table-light">
+              <tr>
+                <th colspan="2">合計</th>
+                <th id="sumCost">0</th>
+                <th id="sumExpected">0</th>
+                <th id="sumActual">0</th>
+                <th id="sumTotalCost">0</th>
+                <th id="sumExpProfit">0</th>
+                <th id="sumActProfit">0</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ====== 配置：把這個替換成你部署後的 GAS 執行網址 ======
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzxRPR0UwPswWRyUaLjXt-yhanrJblgMaG0YihYtyckpHdE3gTi7vCrpWUbOBoYyvq/exec";
+    // =========================================================
+
+    const form = document.getElementById('itemForm');
+    const tbody = document.querySelector('#dataTable tbody');
+    const msgEl = document.getElementById('msg');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    function formatNumber(n) { return Number(n || 0).toFixed(2); }
+
+    async function fetchData() {
+      try {
+        // GET 取得試算表資料（GAS 回傳 JSON）
+        const resp = await fetch(GAS_WEB_APP_URL + '?action=get');
+        if (!resp.ok) throw new Error('Fetch error');
+        const data = await resp.json(); // 預期 array of rows 或物件陣列
+        renderTable(data);
+      } catch (e) {
+        console.error(e);
+        msgEl.textContent = '取得資料失敗';
+        msgEl.classList.remove('text-success');
+        msgEl.classList.add('text-danger');
+      }
+    }
+
+    function renderTable(data) {
+      tbody.innerHTML = '';
+      let sumCost = 0, sumExpected = 0, sumActual = 0;
+      // 假設 data 為陣列，每列為物件 {date, name, cost, expected, actual}
+      (data || []).forEach(row => {
+        const cost = parseFloat(row.cost) || 0;
+        const expected = parseFloat(row.expected) || 0;
+        const actual = parseFloat(row.actual) || 0;
+        const totalCost = cost; // 若有其他成本項可加總
+        const expProfit = expected - totalCost;
+        const actProfit = actual - totalCost;
+
+        sumCost += cost;
+        sumExpected += expected;
+        sumActual += actual;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.date || ''}</td>
+          <td>${row.name || ''}</td>
+          <td class="text-end">${formatNumber(cost)}</td>
+          <td class="text-end">${formatNumber(expected)}</td>
+          <td class="text-end">${formatNumber(actual)}</td>
+          <td class="text-end">${formatNumber(totalCost)}</td>
+          <td class="text-end">${formatNumber(expProfit)}</td>
+          <td class="text-end">${formatNumber(actProfit)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('sumCost').textContent = formatNumber(sumCost);
+      document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
+      document.getElementById('sumActual').textContent = formatNumber(sumActual);
+      document.getElementById('sumTotalCost').textContent = formatNumber(sumCost); // 若 totalCost 與 cost 一樣
+      document.getElementById('sumExpProfit').textContent = formatNumber(sumExpected - sumCost);
+      document.getElementById('sumActProfit').textContent = formatNumber(sumActual - sumCost);
+      msgEl.textContent = '';
+      msgEl.classList.remove('text-danger');
+    }
+
+    // 表單送出（用 application/x-www-form-urlencoded）
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgEl.textContent = '送出中...';
+      msgEl.classList.remove('text-danger');
+      msgEl.classList.add('text-success');
+
+      const formData = new URLSearchParams(new FormData(form));
+      // 加上 action 以供 GAS 知道要寫入
+      formData.append('action', 'add');
+
+      try {
+        const resp = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: formData.toString(),
+          credentials: 'omit'
+        });
+        const result = await resp.json();
+        if (result && result.status === 'success') {
+          msgEl.textContent = '新增成功';
+          form.reset();
+          fetchData();
+        } else {
+          throw new Error(result && result.message ? result.message : '寫入失敗');
+        }
+      } catch (err) {
+        console.error(err);
+        msgEl.textContent = '寫入失敗';
+        msgEl.classList.remove('text-success');
+        msgEl.classList.add('text-danger');
+      }
+    });
+
+    refreshBtn.addEventListener('click', fetchData);
+
+    // 初次載入
+    fetchData();
+  </script>
+</body>
+</html>
