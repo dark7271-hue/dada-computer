@@ -23,15 +23,15 @@
           </div>
           <div class="col-md-2">
             <label class="form-label">取得成本</label>
-            <input type="number" step="0.01" name="cost" class="form-control" required />
+            <input type="number" name="cost" class="form-control" required />
           </div>
           <div class="col-md-2">
             <label class="form-label">預估售價</label>
-            <input type="number" step="0.01" name="expected" class="form-control" />
+            <input type="number" name="expected" class="form-control" />
           </div>
           <div class="col-md-2">
             <label class="form-label">實際售價</label>
-            <input type="number" step="0.01" name="actual" class="form-control" />
+            <input type="number" name="actual" class="form-control" />
           </div>
           <div class="col-12">
             <button type="submit" class="btn btn-primary">新增</button>
@@ -62,120 +62,104 @@
             <tfoot class="table-light">
               <tr>
                 <th colspan="2">合計</th>
-                <th id="sumCost">0</th>
-                <th id="sumExpected">0</th>
-                <th id="sumActual">0</th>
-                <th id="sumTotalCost">0</th>
-                <th id="sumExpProfit">0</th>
-                <th id="sumActProfit">0</th>
+                <th id="sumCost" class="text-end">0</th>
+                <th id="sumExpected" class="text-end">0</th>
+                <th id="sumActual" class="text-end">0</th>
+                <th id="sumTotalCost" class="text-end">0</th>
+                <th id="sumExpProfit" class="text-end">0</th>
+                <th id="sumActProfit" class="text-end">0</th>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
     </div>
-
   </div>
 
   <script>
-    // ====== 配置：把這個替換成你部署後的 GAS 執行網址 ======
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyxnGpRY_VJSFJgy0QOflFPyI6XpWAD35wxupjRuDP7KiWzgwwzun0tjR3lsPaH8-ZC/exec";
-    // =========================================================
 
     const form = document.getElementById('itemForm');
     const tbody = document.querySelector('#dataTable tbody');
     const msgEl = document.getElementById('msg');
     const refreshBtn = document.getElementById('refreshBtn');
 
-// 金額顯示整數 (移除 .toFixed(2))
-function formatNumber(n) { 
-  return Math.round(Number(n || 0)).toLocaleString(); 
-}
+    // 金額顯示整數並加千分位
+    function formatNumber(n) { 
+      return Math.round(Number(n || 0)).toLocaleString('zh-TW'); 
+    }
 
-// 格式化日期：只保留 YYYY-MM-DD
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr; // 如果不是正確日期格式就回傳原字串
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const r = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${r}`;
-}
+    // 格式化日期：只保留 YYYY-MM-DD
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const r = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${r}`;
+    }
 
     async function fetchData() {
       try {
-        // GET 取得試算表資料（GAS 回傳 JSON）
         const resp = await fetch(GAS_WEB_APP_URL + '?action=get');
         if (!resp.ok) throw new Error('Fetch error');
-        const data = await resp.json(); // 預期 array of rows 或物件陣列
+        const data = await resp.json();
         renderTable(data);
       } catch (e) {
         console.error(e);
         msgEl.textContent = '取得資料失敗';
-        msgEl.classList.remove('text-success');
         msgEl.classList.add('text-danger');
       }
     }
 
     function renderTable(data) {
-  tbody.innerHTML = '';
-  let sumCost = 0, sumExpected = 0, sumActual = 0;
-  
-  (data || []).forEach(row => {
-    const cost = parseFloat(row.cost) || 0;
-    const expected = parseFloat(row.expected) || 0;
-    const actual = parseFloat(row.actual) || 0;
-    const totalCost = cost;
-    const expProfit = expected - totalCost;
-    const actProfit = actual - totalCost;
+      tbody.innerHTML = '';
+      let sumCost = 0, sumExpected = 0, sumActual = 0;
+      
+      (data || []).forEach(row => {
+        const cost = parseFloat(row.cost) || 0;
+        const expected = parseFloat(row.expected) || 0;
+        const actual = parseFloat(row.actual) || 0;
+        const totalCost = cost;
+        const expProfit = expected - totalCost;
+        const actProfit = actual - totalCost;
 
-    sumCost += cost;
-    sumExpected += expected;
-    sumActual += actual;
+        sumCost += cost;
+        sumExpected += expected;
+        sumActual += actual;
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${formatDate(row.date)}</td> 
-      <td>${row.name || ''}</td>
-      <td class="text-end">${formatNumber(cost)}</td>
-      <td class="text-end">${formatNumber(expected)}</td>
-      <td class="text-end">${formatNumber(actual)}</td>
-      <td class="text-end">${formatNumber(totalCost)}</td>
-      <td class="text-end">${formatNumber(expProfit)}</td>
-      <td class="text-end">${formatNumber(actProfit)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // 更新合計列
-  document.getElementById('sumCost').textContent = formatNumber(sumCost);
-  document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
-  document.getElementById('sumActual').textContent = formatNumber(sumActual);
-  document.getElementById('sumTotalCost').textContent = formatNumber(sumCost);
-  document.getElementById('sumExpProfit').textContent = formatNumber(sumExpected - sumCost);
-  document.getElementById('sumActProfit').textContent = formatNumber(sumActual - sumCost);
-}
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${formatDate(row.date)}</td> 
+          <td>${row.name || ''}</td>
+          <td class="text-end">${formatNumber(cost)}</td>
+          <td class="text-end">${formatNumber(expected)}</td>
+          <td class="text-end">${formatNumber(actual)}</td>
+          <td class="text-end">${formatNumber(totalCost)}</td>
+          <td class="text-end">${formatNumber(expProfit)}</td>
+          <td class="text-end">${formatNumber(actProfit)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
 
       document.getElementById('sumCost').textContent = formatNumber(sumCost);
       document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
       document.getElementById('sumActual').textContent = formatNumber(sumActual);
-      document.getElementById('sumTotalCost').textContent = formatNumber(sumCost); // 若 totalCost 與 cost 一樣
+      document.getElementById('sumTotalCost').textContent = formatNumber(sumCost);
       document.getElementById('sumExpProfit').textContent = formatNumber(sumExpected - sumCost);
       document.getElementById('sumActProfit').textContent = formatNumber(sumActual - sumCost);
+      
       msgEl.textContent = '';
       msgEl.classList.remove('text-danger');
     }
 
-    // 表單送出（用 application/x-www-form-urlencoded）
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       msgEl.textContent = '送出中...';
-      msgEl.classList.remove('text-danger');
       msgEl.classList.add('text-success');
 
       const formData = new URLSearchParams(new FormData(form));
-      // 加上 action 以供 GAS 知道要寫入
       formData.append('action', 'add');
 
       try {
@@ -191,19 +175,16 @@ function formatDate(dateStr) {
           form.reset();
           fetchData();
         } else {
-          throw new Error(result && result.message ? result.message : '寫入失敗');
+          throw new Error('寫入失敗');
         }
       } catch (err) {
         console.error(err);
         msgEl.textContent = '寫入失敗';
-        msgEl.classList.remove('text-success');
         msgEl.classList.add('text-danger');
       }
     });
 
     refreshBtn.addEventListener('click', fetchData);
-
-    // 初次載入
     fetchData();
   </script>
 </body>
