@@ -41,9 +41,10 @@
             <option value="6_硬碟">硬碟</option>
             <option value="7_機殼">機殼</option>
             <option value="8_風扇">風扇</option>
+            <option value="9_POWER">POWER</option>
         </select>
         <label>品項名稱</label>
-        <input id="in_name" placeholder="例: B450 + R5 2600">
+        <input id="in_name" placeholder="例: 海韻 650W 金牌">
         <label>買入日</label>
         <input id="in_buyDate" type="date">
     </div>
@@ -59,7 +60,6 @@
         <label>賣出日</label><input id="in_sellDate" type="date">
     </div>
     <div style="text-align: right; margin-top: 10px;">
-        <!-- 用來紀錄正在編輯哪一筆原始資料的 ID -->
         <span id="editId" style="display:none"></span>
         <button id="cancelBtn" style="display:none; background:#666; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; margin-right: 10px;" onclick="resetForm()">取消編輯</button>
         <button class="btn-add" id="mainBtn" onclick="handleSubmit()">新增紀錄</button>
@@ -84,7 +84,6 @@
 </table>
 
 <script>
-    // 資料初始化，每筆資料給一個唯一的 ID 以方便排序後還能精準編輯
     let data = JSON.parse(localStorage.getItem("pcData") || "[]");
 
     function save() {
@@ -110,7 +109,6 @@
         }
     }
 
-    // 核心功能：排序
     function sortData() {
         data.sort((a, b) => a.category.localeCompare(b.category, 'zh-Hans-CN'));
     }
@@ -118,7 +116,7 @@
     function handleSubmit() {
         const id = document.getElementById("editId").innerText;
         const item = {
-            id: id || Date.now().toString(), // 如果是新增，給一個新ID
+            id: id || Date.now().toString(),
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
             purchase: Number(document.getElementById("in_purchase").value),
@@ -139,31 +137,25 @@
             data[index] = item;
         }
 
-        sortData(); // 儲存前先排序
+        sortData();
         save();
-        // 在 handleSubmit 函數內的 save(); 之後加入這段：
+        
+        // 雲端同步
+        const cloudUrl = "https://script.google.com/macros/s/AKfycbyNOjKiYGzCQ99DVIhWo8731d5kX_Jdvhh1BEaH9-GAwkBD2N1xZJmG0EdbOt2f7H3V/exec";
+        fetch(cloudUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(item)
+        })
+        .then(() => {
+            console.log("雲端指令已發送");
+        })
+        .catch(err => console.error("雲端同步失敗:", err));
 
-// 修改後的 fetch 部分
-const cloudUrl = "https://script.google.com/macros/s/AKfycbyNOjKiYGzCQ99DVIhWo8731d5kX_Jdvhh1BEaH9-GAwkBD2N1xZJmG0EdbOt2f7H3V/exec";
-
-// 為了避開 CORS 複雜限制，我們改用最傳統的傳送方式
-fetch(cloudUrl, {
-    method: "POST",
-    mode: "no-cors", // 保持 no-cors
-    headers: {
-        "Content-Type": "text/plain" // GAS 接收 JSON 時，改用 text/plain 通常更穩
-    },
-    body: JSON.stringify(item)
-})
-.then(() => {
-    // 因為 no-cors 無法得知真實結果，這裡給個溫馨提示
-    console.log("資料已送出至雲端管道");
-    alert("資料處理中，請檢查 Google 表單");
-})
-.catch(err => {
-    alert("網路連線失敗");
-    console.error(err);
-});
+        render();
+        resetForm();
+    }
 
     function edit(id) {
         const item = data.find(d => d.id === id.toString());
@@ -210,7 +202,6 @@ fetch(cloudUrl, {
         const listBody = document.getElementById("list");
         listBody.innerHTML = "";
         data.forEach((i) => {
-            // 顯示時把序號去掉，只顯示純中文
             const cleanCategory = i.category.split('_')[1];
             listBody.innerHTML += `
             <tr>
