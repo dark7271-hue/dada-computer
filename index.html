@@ -2,116 +2,87 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🖥️ 翻修進銷存系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電腦翻修進銷存 - 強制同步版</title>
     <style>
         :root {
-            --bg-color: #0d0d0d;
-            --card-bg: #1c1c1e;
-            --input-bg: #2c2c2e;
-            --primary: #46b760;
-            --text-main: #ffffff;
-            --text-sub: #8e8e93;
-            --border: #3a3a3c;
+            --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
+            --accent: #2196f3; --text: #e0e0e0; --border: #333;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
-        .container { max-width: 500px; margin: 0 auto; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 10px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h2 { text-align: center; color: var(--primary); margin: 15px 0; }
+
+        /* 狀態指示燈 */
+        .sync-status { text-align: center; font-size: 0.8em; margin-bottom: 10px; color: var(--accent); }
+
+        .summary-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+        .summary-item { flex: 1; background: var(--card-bg); padding: 10px; border-radius: 8px; text-align: center; border-bottom: 3px solid var(--primary); }
+        .summary-item b { font-size: 1.2em; color: #fff; }
+
+        .input-group { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .input-item { display: flex; flex-direction: column; }
+        label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
+        input, select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; }
         
-        h2 { text-align: center; color: var(--primary); font-size: 24px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
+        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-main { background: var(--primary); color: white; flex-grow: 1; }
+        .btn-main:disabled { background: #444; color: #888; cursor: not-allowed; }
 
-        /* 統計面板 - 參照圖片 */
-        .summary-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .summary-item { background: var(--card-bg); padding: 12px 5px; border-radius: 10px; text-align: center; border-bottom: 2px solid #2d5a36; }
-        .summary-item span { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
-        .summary-item b { font-size: 18px; color: var(--text-main); }
-        .summary-item b.money { color: var(--text-main); }
-
-        /* 輸入區域卡片 */
-        .input-card { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 25px; }
-        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .full-width { grid-column: span 2; }
+        .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
+        .desktop-table th, .desktop-table td { padding: 12px; border: 1px solid var(--border); text-align: center; }
+        .mobile-list { display: flex; flex-direction: column; gap: 12px; }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); }
         
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 13px; color: var(--text-sub); margin-left: 2px; }
-        input, select { background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: white; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary); }
-
-        .btn-submit { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; margin-top: 20px; cursor: pointer; transition: opacity 0.2s; }
-        .btn-submit:active { opacity: 0.8; }
-
-        /* 列表部分 */
-        .list-header { color: var(--primary); font-weight: bold; margin: 15px 0 10px; padding-left: 5px; border-left: 3px solid var(--primary); }
-        .item-list { display: flex; flex-direction: column; gap: 12px; }
-        .item-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .item-info { display: flex; flex-direction: column; gap: 4px; }
-        .item-name { font-weight: bold; font-size: 16px; }
-        .item-meta { font-size: 12px; color: var(--text-sub); }
-        .item-price { text-align: right; }
-        .profit-text { color: var(--primary); font-weight: bold; font-size: 16px; }
-        .loss-text { color: #ff453a; font-weight: bold; font-size: 16px; }
-        
-        .sync-status { text-align: center; font-size: 12px; color: var(--text-sub); margin-bottom: 10px; }
+        @media (min-width: 768px) {
+            .desktop-table { display: table; }
+            .mobile-list { display: none; }
+            .input-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .profit { color: var(--primary); font-weight: bold; }
+        .loss { color: #f44336; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>💻 翻修進銷存系統</h2>
-    <div id="status" class="sync-status">雲端同步中...</div>
+    <h2>🖥️ 翻修進銷存系統</h2>
+    <div id="syncStatus" class="sync-status">📡 正在檢查雲端連線...</div>
 
-    <!-- 統計數據 -->
     <div class="summary-bar">
-        <div class="summary-item"><span>在庫項目</span><b id="count_stock">0</b></div>
-        <div class="summary-item"><span>已售項目</span><b id="count_sold">0</b></div>
-        <div class="summary-item"><span>累計獲利</span><b id="total_profit">$0</b></div>
+        <div class="summary-item"><span>在庫</span><b id="count_stock">0</b></div>
+        <div class="summary-item"><span>已售</span><b id="count_sold">0</b></div>
+        <div class="summary-item"><span>獲利</span><b id="total_profit">$0</b></div>
     </div>
 
-    <!-- 輸入表單 -->
-    <div class="input-card">
+    <div class="input-group" id="inputPanel">
         <div class="input-grid">
-            <div class="input-group">
-                <label>分類</label>
-                <select id="in_category">
-                    <option value="整機">整機</option>
-                    <option value="零件">零件</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>品項名稱</label>
-                <input id="in_name" placeholder="規格型號">
-            </div>
-            <div class="input-group">
-                <label>收購/總成本</label>
-                <input id="in_purchase" type="number" value="0">
-            </div>
-            <div class="input-group">
-                <label>買入日期</label>
-                <input id="in_buyDate" type="date">
-            </div>
-            <div class="input-group">
-                <label>預計售價</label>
-                <input id="in_expect" type="number" value="0">
-            </div>
-            <div class="input-group">
-                <label>實際售價</label>
-                <input id="in_actual" type="number" value="0">
-            </div>
-            <div class="input-group full-width">
-                <label>賣出日期</label>
-                <input id="in_sellDate" type="date">
-            </div>
+            <div class="input-item"><label>分類</label><select id="in_category"><option value="1_整機">整機</option><option value="2_主機板">主機板</option><option value="3_CPU">CPU</option><option value="4_記憶體">記憶體</option><option value="5_顯卡">顯卡</option><option value="6_硬碟">硬碟</option><option value="7_機殼">機殼</option><option value="8_風扇">風扇</option><option value="9_POWER">POWER</option></select></div>
+            <div class="input-item"><label>品項名稱</label><input id="in_name" placeholder="規格型號"></div>
+            <div class="input-item"><label>成本</label><input id="in_purchase" type="number" value="0"></div>
+            <div class="input-item"><label>買入日期</label><input id="in_buyDate" type="date"></div>
+            <div class="input-item"><label>預計售價</label><input id="in_expect" type="number" value="0"></div>
+            <div class="input-item"><label>實際售價</label><input id="in_actual" type="number" value="0"></div>
+            <div class="input-item"><label>賣出日期</label><input id="in_sellDate" type="date"></div>
         </div>
-        <button class="btn-submit" onclick="handleSubmit()">新增紀錄</button>
+        <div class="btn-row">
+            <span id="editId" style="display:none"></span>
+            <button id="mainBtn" class="btn btn-main" onclick="handleSubmit()">儲存並同步到雲端</button>
+        </div>
     </div>
 
-    <div class="list-header">近期紀錄</div>
-    <div class="item-list" id="display_list"></div>
+    <table class="desktop-table">
+        <thead><tr><th>分類</th><th>名稱</th><th>成本</th><th>利潤</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="pc_tbody"></tbody>
+    </table>
+    <div class="mobile-list" id="mobile_list"></div>
 </div>
 
 <script>
-    // 請替換為你的 Google Apps Script 部署網址
-    const cloudUrl = "https://script.google.com/macros/s/AKfycbwekfeIe022l7YxoMGAcn2fsCck3ZsPDPdI_UsteFdHOvaSNCtmnXxQCxbd7k2HUSzj/exec"; 
-    let localData = JSON.parse(localStorage.getItem("pcData") || "[]");
+    const cloudUrl = "https://script.google.com/macros/s/AKfycbxZmXGBqSO4z4v7QQFrx3bikShRn6MLK9z-pF28GOZoa9CiigI0XeUMyu_xTGtFarvM/exec";
+    let data = JSON.parse(localStorage.getItem("pcData") || "[]");
 
     window.onload = () => {
         render();
@@ -121,81 +92,92 @@
     async function loadFromCloud() {
         try {
             const res = await fetch(cloudUrl);
-            const data = await res.json();
-            if (data) {
-                localData = data;
-                localStorage.setItem("pcData", JSON.stringify(localData));
+            const cloudData = await res.json();
+            if (cloudData) {
+                data = cloudData;
+                localStorage.setItem("pcData", JSON.stringify(data));
                 render();
-                document.getElementById("status").innerText = "● 雲端已同步";
+                document.getElementById("syncStatus").innerText = "✅ 雲端同步完成";
             }
         } catch (e) {
-            document.getElementById("status").innerText = "○ 離線模式";
+            document.getElementById("syncStatus").innerText = "⚠️ 離線模式 (僅讀取本機)";
         }
     }
 
     async function handleSubmit() {
-        const btn = document.querySelector(".btn-submit");
+        const btn = document.getElementById("mainBtn");
+        const id = document.getElementById("editId").innerText;
         const item = {
-            id: Date.now().toString(),
+            id: id || Date.now().toString(),
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
             purchase: Number(document.getElementById("in_purchase").value),
-            buyDate: document.getElementById("in_buyDate").value,
             expect: Number(document.getElementById("in_expect").value),
             actual: Number(document.getElementById("in_actual").value),
+            buyDate: document.getElementById("in_buyDate").value,
             sellDate: document.getElementById("in_sellDate").value
         };
 
-        // UI 立即反應
-        localData.unshift(item);
-        render();
-        btn.innerText = "同步中...";
         btn.disabled = true;
+        btn.innerText = "同步中...";
 
         try {
-            await fetch(cloudUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(item) });
-            document.getElementById("status").innerText = "資料已上傳試算表";
-            setTimeout(loadFromCloud, 1000);
+            // 關鍵修改：不使用 no-cors，改用正常模式
+            await fetch(cloudUrl, {
+                method: "POST",
+                body: JSON.stringify(item)
+            });
+            
+            // 成功後重新抓取雲端，確保手機/電腦同步
+            await loadFromCloud();
+            resetForm();
         } catch (e) {
-            alert("同步失敗，資料僅存於本地");
+            alert("同步失敗，請確認網路連線！");
         } finally {
-            btn.innerText = "新增紀錄";
             btn.disabled = false;
-            // 清空部分欄位
-            document.getElementById("in_name").value = "";
-            document.getElementById("in_actual").value = 0;
+            btn.innerText = "儲存並同步到雲端";
         }
     }
 
+    function resetForm() {
+        document.getElementById("in_name").value = "";
+        document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
+        document.getElementById("editId").innerText = "";
+    }
+
     function render() {
-        const listDiv = document.getElementById("display_list");
-        listDiv.innerHTML = "";
-        let stock = 0, sold = 0, profit = 0;
+        const pcTbody = document.getElementById("pc_tbody");
+        const mobList = document.getElementById("mobile_list");
+        pcTbody.innerHTML = ""; mobList.innerHTML = "";
+        let sCount = 0, soldCount = 0, totalP = 0;
 
-        localData.forEach(i => {
+        data.forEach(i => {
             const isSold = Number(i.actual) > 0;
-            const itemProfit = isSold ? (Number(i.actual) - Number(i.purchase)) : 0;
-            
-            if(isSold) { sold++; profit += itemProfit; } else { stock++; }
+            const finalPrice = isSold ? i.actual : i.expect;
+            const profit = finalPrice - i.purchase;
+            if(isSold) { soldCount++; totalP += profit; } else { sCount++; }
 
-            listDiv.innerHTML += `
-                <div class="item-card">
-                    <div class="item-info">
-                        <span class="item-name">${i.category} - ${i.name}</span>
-                        <span class="item-meta">成本: $${i.purchase} | ${isSold ? '售出: '+i.sellDate : '在庫'}</span>
-                    </div>
-                    <div class="item-price">
-                        <span class="${itemProfit >= 0 ? 'profit-text' : 'loss-text'}">
-                            ${isSold ? '$'+itemProfit : '預售 $'+i.expect}
-                        </span>
-                    </div>
-                </div>
-            `;
+            pcTbody.innerHTML += `<tr><td>${i.category.split('_')[1]}</td><td>${i.name}</td><td>$${i.purchase}</td><td class="${profit>=0?'profit':'loss'}">$${profit}</td><td>${isSold?'已售':'在庫'}</td><td><button onclick="edit('${i.id}')">改</button></td></tr>`;
+            mobList.innerHTML += `<div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}"><b>${i.name}</b><br>利潤: <span class="${profit>=0?'profit':'loss'}">$${profit}</span></div>`;
         });
 
-        document.getElementById("count_stock").innerText = stock;
-        document.getElementById("count_sold").innerText = sold;
-        document.getElementById("total_profit").innerText = "$" + profit;
+        document.getElementById("count_stock").innerText = sCount;
+        document.getElementById("count_sold").innerText = soldCount;
+        document.getElementById("total_profit").innerText = "$" + totalP;
+    }
+
+    function edit(id) {
+        const item = data.find(d => d.id.toString() === id.toString());
+        if(!item) return;
+        document.getElementById("editId").innerText = item.id;
+        document.getElementById("in_category").value = item.category;
+        document.getElementById("in_name").value = item.name;
+        document.getElementById("in_purchase").value = item.purchase;
+        document.getElementById("in_expect").value = item.expect;
+        document.getElementById("in_actual").value = item.actual;
+        document.getElementById("in_buyDate").value = item.buyDate;
+        document.getElementById("in_sellDate").value = item.sellDate;
+        window.scrollTo(0,0);
     }
 </script>
 </body>
