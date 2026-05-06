@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存03</title>
+    <title>電腦翻修進銷存04</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
@@ -12,42 +12,23 @@
         body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 10px; }
         .container { max-width: 1000px; margin: 0 auto; }
         h2 { text-align: center; color: var(--primary); margin: 15px 0; }
-
-        .sync-status { 
-            text-align: center; 
-            font-size: 0.85em; 
-            margin-bottom: 10px; 
-            padding: 5px;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.05);
-        }
-
+        .sync-status { text-align: center; font-size: 0.85em; margin-bottom: 10px; padding: 5px; border-radius: 5px; background: rgba(255,255,255,0.05); }
         .summary-bar { display: flex; gap: 10px; margin-bottom: 15px; }
         .summary-item { flex: 1; background: var(--card-bg); padding: 10px; border-radius: 8px; text-align: center; border-bottom: 3px solid var(--primary); }
         .summary-item b { font-size: 1.2em; color: #fff; }
-
         .input-group { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
         .input-item { display: flex; flex-direction: column; }
         label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
         input, select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; }
-        
         .btn-row { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
         .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-main { background: var(--primary); color: white; flex-grow: 1; }
         .btn-main:disabled { background: #444; color: #888; cursor: not-allowed; }
-
         .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
         .desktop-table th, .desktop-table td { padding: 12px; border: 1px solid var(--border); text-align: center; }
         .mobile-list { display: flex; flex-direction: column; gap: 12px; }
-        .card { 
-            background: var(--card-bg); 
-            border-radius: 10px; 
-            padding: 15px; 
-            border-left: 5px solid var(--primary);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        
+        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         @media (min-width: 768px) {
             .desktop-table { display: table; }
             .mobile-list { display: none; }
@@ -58,7 +39,6 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>🖥️ 翻修進銷存系統</h2>
     <div id="syncStatus" class="sync-status" style="color: var(--accent);">📡 正在初始化系統...</div>
@@ -71,7 +51,15 @@
 
     <div class="input-group" id="inputPanel">
         <div class="input-grid">
-            <div class="input-item"><label>分類</label><select id="in_category"><option value="1_整機">整機</option><option value="2_主機板">主機板</option><option value="3_CPU">CPU</option><option value="4_記憶體">記憶體</option><option value="5_顯卡">顯卡</option><option value="6_硬碟">硬碟</option><option value="7_機殼">機殼</option><option value="8_風扇">風扇</option><option value="9_POWER">POWER</option></select></div>
+            <div class="input-item"><label>分類</label>
+                <select id="in_category">
+                    <option value="1_整機">整機</option><option value="2_主機板">主機板</option>
+                    <option value="3_CPU">CPU</option><option value="4_記憶體">記憶體</option>
+                    <option value="5_顯卡">顯卡</option><option value="6_硬碟">硬碟</option>
+                    <option value="7_機殼">機殼</option><option value="8_風扇">風扇</option>
+                    <option value="9_POWER">POWER</option>
+                </select>
+            </div>
             <div class="input-item"><label>品項名稱</label><input id="in_name" placeholder="規格型號"></div>
             <div class="input-item"><label>成本</label><input id="in_purchase" type="number" value="0"></div>
             <div class="input-item"><label>買入日期</label><input id="in_buyDate" type="date"></div>
@@ -93,50 +81,81 @@
 </div>
 
 <script>
-    // 請確認此網址已正確發佈為「所有人都能存取」
-    const cloudUrl = "https://script.google.com/macros/s/AKfycbwGmkvuwpySOvJ-joXVIKxoBC3UYTG5ESpitRJgbnJqdMcwJajxNSQc0pBhML4e78aM/exec";
-    
+    // ✅ 用 JSONP 方式繞過 CORS，這是 GAS 唯一可靠的跨域讀取方法
+    const cloudUrl = "https://script.google.com/macros/s/AKfycbwHndRt_RQxF_1sSfgrcalM5SAhkU2qrd8IekRnlAarXd26m5H-KicVh0qOlxWAUcpS/exec";
+
     let data = JSON.parse(localStorage.getItem("pcData") || "[]");
     let isSyncing = false;
 
     window.onload = () => {
-        render();
+        render(); // 先顯示本地資料
         loadFromCloud();
-        // 手機端建議調降頻率至 20 秒，避免請求衝突
         setInterval(loadFromCloud, 20000);
     };
 
-    async function loadFromCloud() {
+    // ✅ 改用 JSONP 方式 GET，徹底解決 CORS 問題
+    function loadFromCloud() {
         if (isSyncing) return;
         isSyncing = true;
         const statusEl = document.getElementById("syncStatus");
-        
-        try {
-            // 使用 GET 獲取資料，增加 cache: 'no-cache' 確保抓到最新的
-            const res = await fetch(cloudUrl, { method: "GET", cache: 'no-cache' });
-            const cloudData = await res.json();
-            
+        statusEl.innerText = "🔄 正在從雲端讀取...";
+        statusEl.style.color = "#2196f3";
+
+        const cbName = "gasCallback_" + Date.now();
+        const script = document.createElement("script");
+        let done = false;
+
+        // 設定 timeout，避免無限等待
+        const timer = setTimeout(() => {
+            if (done) return;
+            done = true;
+            cleanup();
+            statusEl.innerText = "⚠️ 雲端連線逾時，使用本地資料";
+            statusEl.style.color = "#ff9800";
+            isSyncing = false;
+        }, 10000);
+
+        window[cbName] = function(cloudData) {
+            if (done) return;
+            done = true;
+            cleanup();
+            clearTimeout(timer);
+
             if (Array.isArray(cloudData)) {
                 const map = new Map();
-                // 優先使用雲端資料覆蓋本地
-                data.forEach(i => map.set(i.id.toString(), i));
-                cloudData.forEach(i => map.set(i.id.toString(), i));
-
+                data.forEach(i => map.set(String(i.id), i));
+                cloudData.forEach(i => map.set(String(i.id), i));
                 data = Array.from(map.values());
                 localStorage.setItem("pcData", JSON.stringify(data));
                 render();
-                
                 const now = new Date();
-                statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')})`;
+                statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')})`;
                 statusEl.style.color = "#4caf50";
+            } else {
+                statusEl.innerText = "⚠️ 雲端資料格式異常，使用本地資料";
+                statusEl.style.color = "#ff9800";
             }
-        } catch (e) {
-            console.error("Sync Error:", e);
-            statusEl.innerText = "⚠️ 目前為離線模式 (或伺服器喚醒中)";
-            statusEl.style.color = "#ff9800";
-        } finally {
             isSyncing = false;
+        };
+
+        function cleanup() {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
         }
+
+        script.onerror = function() {
+            if (done) return;
+            done = true;
+            cleanup();
+            clearTimeout(timer);
+            statusEl.innerText = "⚠️ 目前為離線模式";
+            statusEl.style.color = "#ff9800";
+            isSyncing = false;
+        };
+
+        // ✅ GAS 支援 callback 參數，會自動包成 JSONP 回傳
+        script.src = cloudUrl + "?callback=" + cbName + "&t=" + Date.now();
+        document.head.appendChild(script);
     }
 
     async function handleSubmit() {
@@ -153,32 +172,33 @@
             sellDate: document.getElementById("in_sellDate").value
         };
 
-        // 先更新本地 UI（提升使用者體驗：Optimistic UI）
-        const map = new Map(data.map(i => [i.id.toString(), i]));
-        map.set(item.id.toString(), item);
+        // Optimistic UI：先更新本地
+        const map = new Map(data.map(i => [String(i.id), i]));
+        map.set(String(item.id), item);
         data = Array.from(map.values());
         localStorage.setItem("pcData", JSON.stringify(data));
         render();
 
         btn.disabled = true;
         btn.innerText = "正在同步至雲端...";
+        const statusEl = document.getElementById("syncStatus");
 
         try {
-            // 使用 no-cors 解決手機瀏覽器最常見的跨網域攔截問題
+            // ✅ POST 用 no-cors（GAS POST 無法避免），但本地已更新所以沒問題
             await fetch(cloudUrl, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify(item)
             });
-            
-            document.getElementById("syncStatus").innerText = "🚀 資料已排隊送出";
+            statusEl.innerText = "🚀 資料已送出，等待雲端確認...";
+            statusEl.style.color = "#2196f3";
             resetForm();
-            
-            // 延後兩秒抓取雲端最新狀態，給 GAS 一點時間處理
-            setTimeout(loadFromCloud, 2000);
+            // 延後 3 秒用 JSONP 抓回確認
+            setTimeout(loadFromCloud, 3000);
         } catch (e) {
-            alert("同步失敗，資料已暫存在手機。");
+            statusEl.innerText = "⚠️ 網路異常，資料已暫存本地";
+            statusEl.style.color = "#ff9800";
         } finally {
             btn.disabled = false;
             btn.innerText = "儲存並同步到雲端";
@@ -189,6 +209,7 @@
         document.getElementById("in_name").value = "";
         document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
         document.getElementById("editId").innerText = "";
+        document.getElementById("in_buyDate").value = "";
         document.getElementById("in_sellDate").value = "";
     }
 
@@ -198,35 +219,27 @@
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
 
-        // 排序：先按分類，再按狀態
-        data.sort((a,b) => a.category.localeCompare(b.category));
+        data.sort((a, b) => a.category.localeCompare(b.category));
 
         data.forEach(i => {
             const isSold = Number(i.actual) > 0;
-            const finalPrice = isSold ? i.actual : i.expect;
-            const profit = finalPrice - i.purchase;
-            
-            if(isSold) { soldCount++; totalP += profit; } else { sCount++; }
-
+            const finalPrice = isSold ? Number(i.actual) : Number(i.expect);
+            const profit = finalPrice - Number(i.purchase);
+            if (isSold) { soldCount++; totalP += profit; } else { sCount++; }
             const catName = i.category.includes('_') ? i.category.split('_')[1] : i.category;
 
-            // 桌面版表格
             pcTbody.innerHTML += `
                 <tr>
-                    <td>${catName}</td>
-                    <td>${i.name}</td>
-                    <td>$${i.purchase}</td>
-                    <td class="${profit>=0?'profit':'loss'}">$${profit}</td>
-                    <td>${isSold?'✅已售':'📦在庫'}</td>
+                    <td>${catName}</td><td>${i.name}</td><td>$${i.purchase}</td>
+                    <td class="${profit >= 0 ? 'profit' : 'loss'}">$${profit}</td>
+                    <td>${isSold ? '✅已售' : '📦在庫'}</td>
                     <td><button onclick="edit('${i.id}')">改</button></td>
                 </tr>`;
 
-            // 手機版卡片
             mobList.innerHTML += `
-                <div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}" onclick="edit('${i.id}')">
+                <div class="card" style="border-left-color:${isSold ? '#4caf50' : '#ff9800'}" onclick="edit('${i.id}')">
                     <div style="display:flex; justify-content:space-between;">
-                        <b>${i.name}</b>
-                        <small>${catName}</small>
+                        <b>${i.name}</b><small>${catName}</small>
                     </div>
                     <div style="font-size:0.9em; margin-top:5px; color:#bbb;">
                         成本: $${i.purchase} | 
@@ -244,8 +257,8 @@
     }
 
     function edit(id) {
-        const item = data.find(d => d.id.toString() === id.toString());
-        if(!item) return;
+        const item = data.find(d => String(d.id) === String(id));
+        if (!item) return;
         document.getElementById("editId").innerText = item.id;
         document.getElementById("in_category").value = item.category;
         document.getElementById("in_name").value = item.name;
