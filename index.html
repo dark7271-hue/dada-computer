@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存 - 強制同步版</title>
+    <title>電腦翻修進銷存 - 強制版</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
@@ -73,7 +73,7 @@
 </div>
 
 <script>
-    const cloudUrl = "你的GAS佈署網址"; // <--- 請務必換成你的網址
+    const cloudUrl = "https://script.google.com/macros/s/AKfycbxnzRhThsLybN4_rnouTLdn_2w4F8UKuqtiL8_MpSrEXqmxwZtz4uX6_rRpgvzGRVMz/exec"; // <--- 請務必換成你的網址
     let data = JSON.parse(localStorage.getItem("pcData") || "[]");
 
     // 核心優化 1：開啟網頁立即抓取雲端資料
