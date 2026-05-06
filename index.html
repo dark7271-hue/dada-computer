@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存04</title>
+    <title>電腦翻修進銷存05</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
@@ -125,8 +125,8 @@
                 const map = new Map();
                 data.forEach(i => map.set(String(i.id), i));
                 cloudData.forEach(i => map.set(String(i.id), i));
-                data = Array.from(map.values());
-                localStorage.setItem("pcData", JSON.stringify(data));
+data = Array.from(map.values()).filter(i => i && i.id);
+localStorage.setItem("pcData", JSON.stringify(data));
                 render();
                 const now = new Date();
                 statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')})`;
@@ -175,8 +175,8 @@
         // Optimistic UI：先更新本地
         const map = new Map(data.map(i => [String(i.id), i]));
         map.set(String(item.id), item);
-        data = Array.from(map.values());
-        localStorage.setItem("pcData", JSON.stringify(data));
+data = Array.from(map.values()).filter(i => i && i.id);
+localStorage.setItem("pcData", JSON.stringify(data));
         render();
 
         btn.disabled = true;
@@ -219,7 +219,8 @@
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
 
-        data.sort((a, b) => a.category.localeCompare(b.category));
+        data = data.filter(i => i && i.id); // 過濾掉空/損壞的資料
+data.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
 
         data.forEach(i => {
             const isSold = Number(i.actual) > 0;
