@@ -87,14 +87,22 @@
     window.onload = () => {
         render();
         loadFromCloud();
-    };
+     // 每5秒同步（手機關鍵）
+    setInterval(loadFromCloud, 5000);
+};
 
     async function loadFromCloud() {
         try {
             const res = await fetch(cloudUrl);
             const cloudData = await res.json();
             if (cloudData) {
-                data = cloudData;
+const map = new Map();
+
+[...data, ...cloudData].forEach(i => {
+    map.set(i.id, i);
+});
+
+data = Array.from(map.values());
                 localStorage.setItem("pcData", JSON.stringify(data));
                 render();
                 document.getElementById("syncStatus").innerText = "✅ 雲端同步完成";
@@ -123,13 +131,18 @@
 
         try {
             // 關鍵修改：不使用 no-cors，改用正常模式
-            await fetch(cloudUrl, {
-                method: "POST",
-                body: JSON.stringify(item)
-            });
+await fetch(cloudUrl, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify(item)
+});
             
-            // 成功後重新抓取雲端，確保手機/電腦同步
-            await loadFromCloud();
+// 等GAS寫入完成（關鍵）
+setTimeout(async () => {
+    await loadFromCloud();
+}, 1200);
             resetForm();
         } catch (e) {
             alert("同步失敗，請確認網路連線！");
