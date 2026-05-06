@@ -87,7 +87,21 @@
     const msgEl = document.getElementById('msg');
     const refreshBtn = document.getElementById('refreshBtn');
 
-    function formatNumber(n) { return Number(n || 0).toFixed(2); }
+// 金額顯示整數 (移除 .toFixed(2))
+function formatNumber(n) { 
+  return Math.round(Number(n || 0)).toLocaleString(); 
+}
+
+// 格式化日期：只保留 YYYY-MM-DD
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr; // 如果不是正確日期格式就回傳原字串
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const r = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${r}`;
+}
 
     async function fetchData() {
       try {
