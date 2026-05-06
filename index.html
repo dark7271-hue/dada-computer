@@ -143,22 +143,27 @@
         save();
         // 在 handleSubmit 函數內的 save(); 之後加入這段：
 
+// 修改後的 fetch 部分
 const cloudUrl = "https://script.google.com/macros/s/AKfycbyNOjKiYGzCQ99DVIhWo8731d5kX_Jdvhh1BEaH9-GAwkBD2N1xZJmG0EdbOt2f7H3V/exec";
 
+// 為了避開 CORS 複雜限制，我們改用最傳統的傳送方式
 fetch(cloudUrl, {
     method: "POST",
-    body: JSON.stringify(item), // item 就是你原本算好的那筆資料物件
-    mode: "no-cors" // 避免瀏覽器安全攔截
+    mode: "no-cors", // 保持 no-cors
+    headers: {
+        "Content-Type": "text/plain" // GAS 接收 JSON 時，改用 text/plain 通常更穩
+    },
+    body: JSON.stringify(item)
 })
 .then(() => {
-    alert("雲端同步成功！");
+    // 因為 no-cors 無法得知真實結果，這裡給個溫馨提示
+    console.log("資料已送出至雲端管道");
+    alert("資料處理中，請檢查 Google 表單");
 })
 .catch(err => {
-    console.error("同步失敗:", err);
+    alert("網路連線失敗");
+    console.error(err);
 });
-        render();
-        resetForm();
-    }
 
     function edit(id) {
         const item = data.find(d => d.id === id.toString());
