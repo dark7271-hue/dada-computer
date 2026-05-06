@@ -2,86 +2,112 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>電腦翻修紀錄工具 - 自動排序版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電腦翻修小助手</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background:#1a1a1a; color:#eee; }
-        .input-group { background: #2c2c2c; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; border-left: 5px solid #4caf50; }
-        .input-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; align-items: center; }
-        input, select { padding: 8px; border-radius: 6px; border: 1px solid #444; background: #3d3d3d; color: white; flex: 1; min-width: 140px; }
-        label { font-size: 0.9em; color: #aaa; margin-right: 5px; }
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #4caf50;
+            --accent: #2196f3;
+            --text: #e0e0e0;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 15px; }
+        h2 { text-align: center; color: var(--primary); margin-bottom: 20px; }
+
+        /* 輸入區優化 */
+        .input-group { background: var(--card-bg); padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 25px; border: 1px solid #333; }
+        .input-row { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row > div { flex: 1; }
         
-        table { width:100%; border-collapse: collapse; background: #2c2c2c; border-radius: 8px; overflow: hidden; margin-top: 10px; }
-        td, th { border: 1px solid #444; padding: 12px; text-align: center; }
-        th { background: #333; color: #4caf50; font-weight: bold; }
-        tr:hover { background: #353535; }
+        label { display: block; font-size: 0.85em; color: #888; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; box-sizing: border-box; }
         
-        .profit { color:#4caf50; font-weight: bold; }
-        .loss { color:#f44336; font-weight: bold; }
-        .expected { color: #9c27b0; font-size: 0.85em; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn-cancel { background: #555; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 10px; display: none; }
+
+        /* 卡片清單優化 */
+        .card-list { display: flex; flex-direction: column; gap: 15px; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 15px; border-left: 5px solid var(--primary); position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .category-tag { background: #333; color: var(--primary); padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .card-title { font-size: 1.1em; font-weight: bold; margin-top: 5px; }
         
-        .btn-add { background: #4caf50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .btn-edit { background: #2196f3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .btn-del { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .edit-mode { border-left: 5px solid #2196f3 !important; background: #2b3a4a !important; }
+        .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
+        .data-item { color: #aaa; }
+        .data-value { color: #fff; font-weight: 500; }
+        
+        .profit-area { text-align: right; margin-top: 10px; }
+        .profit-val { font-size: 1.2em; font-weight: bold; }
+        .profit { color: var(--primary); }
+        .loss { color: #f44336; }
+
+        .actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-sm { flex: 1; padding: 8px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+        .edit { background: var(--accent); color: white; }
+        .del { background: #f44336; color: white; }
+
+        .edit-mode { border-color: var(--accent) !important; background: #1a2633 !important; }
     </style>
 </head>
 <body>
 
-<h2>🖥️ 電腦翻修進銷存 (自動分類排序)</h2>
+<h2>🖥️ 翻修進銷存</h2>
 
 <div class="input-group" id="inputPanel">
+    <button id="cancelBtn" class="btn-cancel" onclick="resetForm()">取消編輯</button>
     <div class="input-row">
-        <label>分類</label>
-        <select id="in_category">
-            <option value="1_整機">整機</option>
-            <option value="2_主機板">主機板</option>
-            <option value="3_CPU">CPU</option>
-            <option value="4_記憶體">記憶體</option>
-            <option value="5_顯卡">顯卡</option>
-            <option value="6_硬碟">硬碟</option>
-            <option value="7_機殼">機殼</option>
-            <option value="8_風扇">風扇</option>
-            <option value="9_POWER">POWER</option>
-        </select>
-        <label>品項名稱</label>
-        <input id="in_name" placeholder="例: 海韻 650W 金牌">
-        <label>買入日</label>
-        <input id="in_buyDate" type="date">
+        <div>
+            <label>分類</label>
+            <select id="in_category">
+                <option value="1_整機">整機</option>
+                <option value="2_主機板">主機板</option>
+                <option value="3_CPU">CPU</option>
+                <option value="4_記憶體">記憶體</option>
+                <option value="5_顯卡">顯卡</option>
+                <option value="6_硬碟">硬碟</option>
+                <option value="7_機殼">機殼</option>
+                <option value="8_風扇">風扇</option>
+                <option value="9_POWER">POWER</option>
+            </select>
+        </div>
+        <div>
+            <label>品項名稱</label>
+            <input id="in_name" placeholder="例: 海韻 650W">
+        </div>
+        <div class="flex-row">
+            <div>
+                <label>收購/總成本</label>
+                <input id="in_purchase" type="number" value="0">
+            </div>
+            <div>
+                <label>買入日</label>
+                <input id="in_buyDate" type="date">
+            </div>
+        </div>
+        <div class="flex-row">
+            <div>
+                <label>預計售價</label>
+                <input id="in_expect" type="number" value="0">
+            </div>
+            <div>
+                <label>實際售價</label>
+                <input id="in_actual" type="number" value="0">
+            </div>
+        </div>
+        <div>
+            <label>賣出日 (已售才填)</label>
+            <input id="in_sellDate" type="date">
+        </div>
     </div>
-    <div class="input-row">
-        <label>收購</label><input id="in_purchase" type="number" value="0">
-        <label>維修</label><input id="in_repair" type="number" value="0">
-        <label>配件</label><input id="in_parts" type="number" value="0">
-        <label>運費</label><input id="in_ship" type="number" value="0">
-    </div>
-    <div class="input-row">
-        <label>預計售價</label><input id="in_expect" type="number" value="0">
-        <label>實際售價</label><input id="in_actual" type="number" value="0">
-        <label>賣出日</label><input id="in_sellDate" type="date">
-    </div>
-    <div style="text-align: right; margin-top: 10px;">
-        <span id="editId" style="display:none"></span>
-        <button id="cancelBtn" style="display:none; background:#666; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; margin-right: 10px;" onclick="resetForm()">取消編輯</button>
-        <button class="btn-add" id="mainBtn" onclick="handleSubmit()">新增紀錄</button>
-    </div>
+    <span id="editId" style="display:none"></span>
+    <button class="btn-add" id="mainBtn" onclick="handleSubmit()">新增紀錄</button>
 </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>分類</th>
-            <th>品項名稱</th>
-            <th>總成本</th>
-            <th>預計售價</th>
-            <th>實際售價</th>
-            <th>利潤</th>
-            <th>ROI</th>
-            <th>持有的天數</th>
-            <th>操作</th>
-        </tr>
-    </thead>
-    <tbody id="list"></tbody>
-</table>
+<div class="card-list" id="list">
+    <!-- 資料會在這裡生成 -->
+</div>
 
 <script>
     let data = JSON.parse(localStorage.getItem("pcData") || "[]");
@@ -91,7 +117,8 @@
     }
 
     function calc(item) {
-        item.total = Number(item.purchase) + Number(item.repair) + Number(item.parts) + Number(item.ship);
+        // 簡化計算：維修/配件/運費已移除，直接使用 purchase 作為總額
+        item.total = Number(item.purchase);
         let finalPrice = item.actual > 0 ? item.actual : item.expect;
         item.profit = finalPrice - item.total;
         item.roi = item.total > 0 ? ((item.profit / item.total) * 100).toFixed(1) : 0;
@@ -103,7 +130,7 @@
         } else if (item.buyDate) {
             let d1 = new Date(item.buyDate);
             let d2 = new Date();
-            item.days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + " (在庫)";
+            item.days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + "天 (在庫)";
         } else {
             item.days = "-";
         }
@@ -120,9 +147,6 @@
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
             purchase: Number(document.getElementById("in_purchase").value),
-            repair: Number(document.getElementById("in_repair").value),
-            parts: Number(document.getElementById("in_parts").value),
-            ship: Number(document.getElementById("in_ship").value),
             expect: Number(document.getElementById("in_expect").value),
             actual: Number(document.getElementById("in_actual").value),
             buyDate: document.getElementById("in_buyDate").value,
@@ -140,18 +164,14 @@
         sortData();
         save();
         
-        // 雲端同步
+        // 雲端同步 (使用你之前的 GAS 連結)
         const cloudUrl = "https://script.google.com/macros/s/AKfycbyNOjKiYGzCQ99DVIhWo8731d5kX_Jdvhh1BEaH9-GAwkBD2N1xZJmG0EdbOt2f7H3V/exec";
         fetch(cloudUrl, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(item)
-        })
-        .then(() => {
-            console.log("雲端指令已發送");
-        })
-        .catch(err => console.error("雲端同步失敗:", err));
+        }).catch(e => console.log("雲端同步跳過"));
 
         render();
         resetForm();
@@ -162,9 +182,6 @@
         document.getElementById("in_category").value = item.category;
         document.getElementById("in_name").value = item.name;
         document.getElementById("in_purchase").value = item.purchase;
-        document.getElementById("in_repair").value = item.repair;
-        document.getElementById("in_parts").value = item.parts;
-        document.getElementById("in_ship").value = item.ship;
         document.getElementById("in_expect").value = item.expect;
         document.getElementById("in_actual").value = item.actual;
         document.getElementById("in_buyDate").value = item.buyDate;
@@ -173,13 +190,13 @@
         document.getElementById("editId").innerText = item.id;
         document.getElementById("mainBtn").innerText = "儲存修改";
         document.getElementById("mainBtn").style.background = "#2196f3";
-        document.getElementById("cancelBtn").style.display = "inline-block";
+        document.getElementById("cancelBtn").style.display = "block";
         document.getElementById("inputPanel").classList.add("edit-mode");
-        window.scrollTo(0, 0);
+        window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
     function del(id) {
-        if(confirm("確定要刪除這筆資料嗎？")) {
+        if(confirm("確定刪除？")) {
             data = data.filter(d => d.id !== id.toString());
             save();
             render();
@@ -188,7 +205,9 @@
 
     function resetForm() {
         document.getElementById("in_name").value = "";
-        document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
+        document.getElementById("in_purchase").value = 0;
+        document.getElementById("in_expect").value = 0;
+        document.getElementById("in_actual").value = 0;
         document.getElementById("in_buyDate").value = "";
         document.getElementById("in_sellDate").value = "";
         document.getElementById("editId").innerText = "";
@@ -199,25 +218,36 @@
     }
 
     function render() {
-        const listBody = document.getElementById("list");
-        listBody.innerHTML = "";
+        const listContainer = document.getElementById("list");
+        listContainer.innerHTML = "";
         data.forEach((i) => {
             const cleanCategory = i.category.split('_')[1];
-            listBody.innerHTML += `
-            <tr>
-                <td style="color:#4caf50; font-weight:bold;">${cleanCategory}</td>
-                <td>${i.name}</td>
-                <td>${i.total}</td>
-                <td class="expected">${i.expect}</td>
-                <td style="font-size: 1.1em; color: ${i.actual > 0 ? '#fff' : '#666'}">${i.actual > 0 ? i.actual : '尚未售出'}</td>
-                <td class="${i.profit >= 0 ? 'profit' : 'loss'}">${i.profit}</td>
-                <td>${i.roi}%</td>
-                <td>${i.days}</td>
-                <td>
-                    <button class="btn-edit" onclick="edit('${i.id}')">編輯</button>
-                    <button class="btn-del" onclick="del('${i.id}')">刪除</button>
-                </td>
-            </tr>`;
+            const profitClass = i.profit >= 0 ? 'profit' : 'loss';
+            const statusText = i.actual > 0 ? `實際售價: $${i.actual}` : `預計售價: $${i.expect}`;
+            
+            listContainer.innerHTML += `
+            <div class="card" style="border-left-color: ${i.actual > 0 ? '#4caf50' : '#ff9800'}">
+                <div class="card-header">
+                    <div>
+                        <span class="category-tag">${cleanCategory}</span>
+                        <div class="card-title">${i.name}</div>
+                    </div>
+                    <div class="profit-area">
+                        <div class="data-item">利潤</div>
+                        <div class="profit-val ${profitClass}">$${i.profit}</div>
+                    </div>
+                </div>
+                <div class="card-grid">
+                    <div class="data-item">總成本: <span class="data-value">$${i.total}</span></div>
+                    <div class="data-item">ROI: <span class="data-value">${i.roi}%</span></div>
+                    <div class="data-item">持有: <span class="data-value">${i.days}</span></div>
+                    <div class="data-item">狀態: <span class="data-value">${i.actual > 0 ? '已售出' : '在庫'}</span></div>
+                </div>
+                <div class="actions">
+                    <button class="btn-sm edit" onclick="edit('${i.id}')">編輯</button>
+                    <button class="btn-sm del" onclick="del('${i.id}')">刪除</button>
+                </div>
+            </div>`;
         });
     }
 
