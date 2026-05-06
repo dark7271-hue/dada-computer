@@ -119,34 +119,43 @@ function formatDate(dateStr) {
     }
 
     function renderTable(data) {
-      tbody.innerHTML = '';
-      let sumCost = 0, sumExpected = 0, sumActual = 0;
-      // 假設 data 為陣列，每列為物件 {date, name, cost, expected, actual}
-      (data || []).forEach(row => {
-        const cost = parseFloat(row.cost) || 0;
-        const expected = parseFloat(row.expected) || 0;
-        const actual = parseFloat(row.actual) || 0;
-        const totalCost = cost; // 若有其他成本項可加總
-        const expProfit = expected - totalCost;
-        const actProfit = actual - totalCost;
+  tbody.innerHTML = '';
+  let sumCost = 0, sumExpected = 0, sumActual = 0;
+  
+  (data || []).forEach(row => {
+    const cost = parseFloat(row.cost) || 0;
+    const expected = parseFloat(row.expected) || 0;
+    const actual = parseFloat(row.actual) || 0;
+    const totalCost = cost;
+    const expProfit = expected - totalCost;
+    const actProfit = actual - totalCost;
 
-        sumCost += cost;
-        sumExpected += expected;
-        sumActual += actual;
+    sumCost += cost;
+    sumExpected += expected;
+    sumActual += actual;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${row.date || ''}</td>
-          <td>${row.name || ''}</td>
-          <td class="text-end">${formatNumber(cost)}</td>
-          <td class="text-end">${formatNumber(expected)}</td>
-          <td class="text-end">${formatNumber(actual)}</td>
-          <td class="text-end">${formatNumber(totalCost)}</td>
-          <td class="text-end">${formatNumber(expProfit)}</td>
-          <td class="text-end">${formatNumber(actProfit)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatDate(row.date)}</td> 
+      <td>${row.name || ''}</td>
+      <td class="text-end">${formatNumber(cost)}</td>
+      <td class="text-end">${formatNumber(expected)}</td>
+      <td class="text-end">${formatNumber(actual)}</td>
+      <td class="text-end">${formatNumber(totalCost)}</td>
+      <td class="text-end">${formatNumber(expProfit)}</td>
+      <td class="text-end">${formatNumber(actProfit)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // 更新合計列
+  document.getElementById('sumCost').textContent = formatNumber(sumCost);
+  document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
+  document.getElementById('sumActual').textContent = formatNumber(sumActual);
+  document.getElementById('sumTotalCost').textContent = formatNumber(sumCost);
+  document.getElementById('sumExpProfit').textContent = formatNumber(sumExpected - sumCost);
+  document.getElementById('sumActProfit').textContent = formatNumber(sumActual - sumCost);
+}
 
       document.getElementById('sumCost').textContent = formatNumber(sumCost);
       document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
