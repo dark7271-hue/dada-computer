@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存05</title>
+    <title>電腦翻修進銷存05-穩定版</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
@@ -81,19 +81,24 @@
 </div>
 
 <script>
-    // ✅ 用 JSONP 方式繞過 CORS，這是 GAS 唯一可靠的跨域讀取方法
+    // ✅ 請確保此網址為 GAS 最新部署的版本
     const cloudUrl = "https://script.google.com/macros/s/AKfycbwHndRt_RQxF_1sSfgrcalM5SAhkU2qrd8IekRnlAarXd26m5H-KicVh0qOlxWAUcpS/exec";
 
-    let data = JSON.parse(localStorage.getItem("pcData") || "[]");
+    let data = [];
+    try {
+        data = JSON.parse(localStorage.getItem("pcData") || "[]");
+    } catch(e) {
+        data = [];
+    }
+
     let isSyncing = false;
 
     window.onload = () => {
-        render(); // 先顯示本地資料
+        render(); // 初始化渲染，這版本不會因為壞資料當機
         loadFromCloud();
-        setInterval(loadFromCloud, 20000);
+        setInterval(loadFromCloud, 30000); // 每 30 秒自動檢查一次
     };
 
-    // ✅ 改用 JSONP 方式 GET，徹底解決 CORS 問題
     function loadFromCloud() {
         if (isSyncing) return;
         isSyncing = true;
@@ -105,7 +110,6 @@
         const script = document.createElement("script");
         let done = false;
 
-        // 設定 timeout，避免無限等待
         const timer = setTimeout(() => {
             if (done) return;
             done = true;
@@ -122,17 +126,20 @@
             clearTimeout(timer);
 
             if (Array.isArray(cloudData)) {
+                // 合併資料：以 id 為主，雲端優先
                 const map = new Map();
-                data.forEach(i => map.set(String(i.id), i));
-                cloudData.forEach(i => map.set(String(i.id), i));
-data = Array.from(map.values()).filter(i => i && i.id);
-localStorage.setItem("pcData", JSON.stringify(data));
+                data.forEach(i => { if(i && i.id) map.set(String(i.id), i); });
+                cloudData.forEach(i => { if(i && i.id) map.set(String(i.id), i); });
+                
+                data = Array.from(map.values());
+                localStorage.setItem("pcData", JSON.stringify(data));
                 render();
+                
                 const now = new Date();
                 statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')})`;
                 statusEl.style.color = "#4caf50";
             } else {
-                statusEl.innerText = "⚠️ 雲端資料格式異常，使用本地資料";
+                statusEl.innerText = "⚠️ 雲端資料格式異常";
                 statusEl.style.color = "#ff9800";
             }
             isSyncing = false;
@@ -153,7 +160,6 @@ localStorage.setItem("pcData", JSON.stringify(data));
             isSyncing = false;
         };
 
-        // ✅ GAS 支援 callback 參數，會自動包成 JSONP 回傳
         script.src = cloudUrl + "?callback=" + cbName + "&t=" + Date.now();
         document.head.appendChild(script);
     }
@@ -165,73 +171,77 @@ localStorage.setItem("pcData", JSON.stringify(data));
             id: id || Date.now().toString(),
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
-            purchase: Number(document.getElementById("in_purchase").value),
-            expect: Number(document.getElementById("in_expect").value),
-            actual: Number(document.getElementById("in_actual").value),
+            purchase: Number(document.getElementById("in_purchase").value) || 0,
+            expect: Number(document.getElementById("in_expect").value) || 0,
+            actual: Number(document.getElementById("in_actual").value) || 0,
             buyDate: document.getElementById("in_buyDate").value,
             sellDate: document.getElementById("in_sellDate").value
         };
 
-        // Optimistic UI：先更新本地
+        // 立即更新本地
         const map = new Map(data.map(i => [String(i.id), i]));
         map.set(String(item.id), item);
-data = Array.from(map.values()).filter(i => i && i.id);
-localStorage.setItem("pcData", JSON.stringify(data));
+        data = Array.from(map.values());
+        localStorage.setItem("pcData", JSON.stringify(data));
         render();
 
         btn.disabled = true;
         btn.innerText = "正在同步至雲端...";
-        const statusEl = document.getElementById("syncStatus");
 
         try {
-            // ✅ POST 用 no-cors（GAS POST 無法避免），但本地已更新所以沒問題
             await fetch(cloudUrl, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "text/plain" },
                 body: JSON.stringify(item)
             });
-            statusEl.innerText = "🚀 資料已送出，等待雲端確認...";
-            statusEl.style.color = "#2196f3";
+            document.getElementById("syncStatus").innerText = "🚀 資料已送出，等待雲端確認...";
             resetForm();
-            // 延後 3 秒用 JSONP 抓回確認
             setTimeout(loadFromCloud, 3000);
         } catch (e) {
-            statusEl.innerText = "⚠️ 網路異常，資料已暫存本地";
-            statusEl.style.color = "#ff9800";
+            document.getElementById("syncStatus").innerText = "⚠️ 網路異常，資料已暫存本地";
         } finally {
             btn.disabled = false;
             btn.innerText = "儲存並同步到雲端";
         }
     }
 
-    function resetForm() {
-        document.getElementById("in_name").value = "";
-        document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
-        document.getElementById("editId").innerText = "";
-        document.getElementById("in_buyDate").value = "";
-        document.getElementById("in_sellDate").value = "";
-    }
-
     function render() {
         const pcTbody = document.getElementById("pc_tbody");
         const mobList = document.getElementById("mobile_list");
+        if (!pcTbody || !mobList) return;
+
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
 
-        data = data.filter(i => i && i.id); // 過濾掉空/損壞的資料
-data.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
+        // 強化防呆：確保資料合法且排除 undefined
+        const safeData = data.filter(i => i && i.id);
+        
+        safeData.sort((a, b) => String(a.category || "").localeCompare(String(b.category || "")));
 
-        data.forEach(i => {
-            const isSold = Number(i.actual) > 0;
-            const finalPrice = isSold ? Number(i.actual) : Number(i.expect);
-            const profit = finalPrice - Number(i.purchase);
+        safeData.forEach(i => {
+            const purchase = Number(i.purchase) || 0;
+            const actual = Number(i.actual) || 0;
+            const expect = Number(i.expect) || 0;
+            
+            const isSold = actual > 0;
+            const finalPrice = isSold ? actual : expect;
+            const profit = finalPrice - purchase;
+            
             if (isSold) { soldCount++; totalP += profit; } else { sCount++; }
-            const catName = i.category.includes('_') ? i.category.split('_')[1] : i.category;
+
+            // 關鍵防呆：確保 category 為字串才使用 includes
+            let catName = "未分類";
+            const rawCat = String(i.category || "");
+            if (rawCat) {
+                catName = rawCat.includes('_') ? rawCat.split('_')[1] : rawCat;
+            }
+
+            const displayName = i.name || "未命名";
 
             pcTbody.innerHTML += `
                 <tr>
-                    <td>${catName}</td><td>${i.name}</td><td>$${i.purchase}</td>
+                    <td>${catName}</td><td>${displayName}</td><td>$${purchase}</td>
                     <td class="${profit >= 0 ? 'profit' : 'loss'}">$${profit}</td>
                     <td>${isSold ? '✅已售' : '📦在庫'}</td>
                     <td><button onclick="edit('${i.id}')">改</button></td>
@@ -240,11 +250,10 @@ data.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
             mobList.innerHTML += `
                 <div class="card" style="border-left-color:${isSold ? '#4caf50' : '#ff9800'}" onclick="edit('${i.id}')">
                     <div style="display:flex; justify-content:space-between;">
-                        <b>${i.name}</b><small>${catName}</small>
+                        <b>${displayName}</b><small>${catName}</small>
                     </div>
                     <div style="font-size:0.9em; margin-top:5px; color:#bbb;">
-                        成本: $${i.purchase} | 
-                        ${isSold ? `售價: $${i.actual} | <span class="profit">利潤: $${profit}</span>` : `預計: $${i.expect}`}
+                        成本: $${purchase} | ${isSold ? `售價: $${actual} | <span class="profit">利潤: $${profit}</span>` : `預計: $${expect}`}
                     </div>
                     <div style="text-align:right; font-size:0.8em; margin-top:5px;">
                         ${isSold ? '✅ 已售出' : '📦 庫存中'}
@@ -255,6 +264,16 @@ data.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
         document.getElementById("count_stock").innerText = sCount;
         document.getElementById("count_sold").innerText = soldCount;
         document.getElementById("total_profit").innerText = "$" + totalP.toLocaleString();
+    }
+
+    function resetForm() {
+        document.getElementById("in_name").value = "";
+        document.getElementById("in_purchase").value = 0;
+        document.getElementById("in_expect").value = 0;
+        document.getElementById("in_actual").value = 0;
+        document.getElementById("editId").innerText = "";
+        document.getElementById("in_buyDate").value = "";
+        document.getElementById("in_sellDate").value = "";
     }
 
     function edit(id) {
