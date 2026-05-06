@@ -1,248 +1,217 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>硬體管理系統 - 進階版</title> 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <style>
-    .editing { background-color: #fff3cd !important; border: 1px solid #ffeeba; }
-  </style>
+    <meta charset="UTF-8">
+    <title>電腦翻修紀錄工具 - 自動排序版</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background:#1a1a1a; color:#eee; }
+        .input-group { background: #2c2c2c; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; border-left: 5px solid #4caf50; }
+        .input-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; align-items: center; }
+        input, select { padding: 8px; border-radius: 6px; border: 1px solid #444; background: #3d3d3d; color: white; flex: 1; min-width: 140px; }
+        label { font-size: 0.9em; color: #aaa; margin-right: 5px; }
+        
+        table { width:100%; border-collapse: collapse; background: #2c2c2c; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        td, th { border: 1px solid #444; padding: 12px; text-align: center; }
+        th { background: #333; color: #4caf50; font-weight: bold; }
+        tr:hover { background: #353535; }
+        
+        .profit { color:#4caf50; font-weight: bold; }
+        .loss { color:#f44336; font-weight: bold; }
+        .expected { color: #9c27b0; font-size: 0.85em; }
+        
+        .btn-add { background: #4caf50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .btn-edit { background: #2196f3; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-del { background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .edit-mode { border-left: 5px solid #2196f3 !important; background: #2b3a4a !important; }
+    </style>
 </head>
-<body class="bg-light">
-  <div class="container py-4">
-    <h1 class="mb-4">硬體管理 (編輯/刪除版)</h1> 
+<body>
 
-    <!-- 表單區 -->
-    <div class="card mb-4" id="formCard">
-      <div class="card-body">
-        <form id="itemForm" class="row g-3">
-          <!-- 隱藏的行號欄位，用來判斷是新增還是更新 -->
-          <input type="hidden" name="rowIdx" id="rowIdx" />
-          
-          <div class="col-md-3">
-            <label class="form-label">日期</label>
-            <input type="date" name="date" id="f_date" class="form-control" required />
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">硬體名稱</label>
-            <input type="text" name="name" id="f_name" class="form-control" required />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">取得成本</label>
-            <input type="number" name="cost" id="f_cost" class="form-control" required />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">預估售價</label>
-            <input type="number" name="expected" id="f_expected" class="form-control" />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">實際售價</label>
-            <input type="number" name="actual" id="f_actual" class="form-control" />
-          </div>
-          <div class="col-12">
-            <button type="submit" id="submitBtn" class="btn btn-primary">新增資料</button>
-            <button type="button" id="cancelBtn" class="btn btn-secondary d-none" onclick="resetForm()">取消編輯</button>
-            <button id="refreshBtn" type="button" class="btn btn-outline-secondary ms-2">重新整理清單</button>
-            <span id="msg" class="ms-3"></span>
-          </div>
-        </form>
-      </div>
+<h2>🖥️ 電腦翻修進銷存 (自動分類排序)</h2>
+
+<div class="input-group" id="inputPanel">
+    <div class="input-row">
+        <label>分類</label>
+        <select id="in_category">
+            <option value="1_整機">整機</option>
+            <option value="2_主機板">主機板</option>
+            <option value="3_CPU">CPU</option>
+            <option value="4_記憶體">記憶體</option>
+            <option value="5_顯卡">顯卡</option>
+            <option value="6_硬碟">硬碟</option>
+            <option value="7_機殼">機殼</option>
+            <option value="8_風扇">風扇</option>
+        </select>
+        <label>品項名稱</label>
+        <input id="in_name" placeholder="例: B450 + R5 2600">
+        <label>買入日</label>
+        <input id="in_buyDate" type="date">
     </div>
-
-    <!-- 資料表格 -->
-    <div class="card">
-      <div class="card-body">
-        <div class="table-responsive">
-          <table id="dataTable" class="table table-striped table-bordered align-middle">
-            <thead class="table-light text-center">
-              <tr>
-                <th>日期</th>
-                <th>硬體名稱</th>
-                <th>取得成本</th>
-                <th>預估售價</th>
-                <th>實際售價</th>
-                <th>總成本</th>
-                <th>預計利潤</th>
-                <th>實際利潤</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-            <tfoot class="table-light">
-              <tr>
-                <th colspan="2" class="text-center">合計</th>
-                <th id="sumCost" class="text-end">0</th>
-                <th id="sumExpected" class="text-end">0</th>
-                <th id="sumActual" class="text-end">0</th>
-                <th id="sumTotalCost" class="text-end">0</th>
-                <th id="sumExpProfit" class="text-end">0</th>
-                <th id="sumActProfit" class="text-end">0</th>
-                <th></th>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+    <div class="input-row">
+        <label>收購</label><input id="in_purchase" type="number" value="0">
+        <label>維修</label><input id="in_repair" type="number" value="0">
+        <label>配件</label><input id="in_parts" type="number" value="0">
+        <label>運費</label><input id="in_ship" type="number" value="0">
     </div>
-  </div>
+    <div class="input-row">
+        <label>預計售價</label><input id="in_expect" type="number" value="0">
+        <label>實際售價</label><input id="in_actual" type="number" value="0">
+        <label>賣出日</label><input id="in_sellDate" type="date">
+    </div>
+    <div style="text-align: right; margin-top: 10px;">
+        <!-- 用來紀錄正在編輯哪一筆原始資料的 ID -->
+        <span id="editId" style="display:none"></span>
+        <button id="cancelBtn" style="display:none; background:#666; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; margin-right: 10px;" onclick="resetForm()">取消編輯</button>
+        <button class="btn-add" id="mainBtn" onclick="handleSubmit()">新增紀錄</button>
+    </div>
+</div>
 
-  <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyxnGpRY_VJSFJgy0QOflFPyI6XpWAD35wxupjRuDP7KiWzgwwzun0tjR3lsPaH8-ZC/exec";
+<table>
+    <thead>
+        <tr>
+            <th>分類</th>
+            <th>品項名稱</th>
+            <th>總成本</th>
+            <th>預計售價</th>
+            <th>實際售價</th>
+            <th>利潤</th>
+            <th>ROI</th>
+            <th>持有的天數</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody id="list"></tbody>
+</table>
 
-    const form = document.getElementById('itemForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const formCard = document.getElementById('formCard');
-    const msgEl = document.getElementById('msg');
+<script>
+    // 資料初始化，每筆資料給一個唯一的 ID 以方便排序後還能精準編輯
+    let data = JSON.parse(localStorage.getItem("pcData") || "[]");
 
-    // 格式化數字
-    function formatNumber(n) { 
-      return Math.round(Number(n || 0)).toLocaleString('zh-TW'); 
+    function save() {
+        localStorage.setItem("pcData", JSON.stringify(data));
     }
 
-    // 格式化日期 (處理 GAS 傳回的字串)
-    function formatDate(dateStr) {
-      if (!dateStr) return '';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const r = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${r}`;
-    }
+    function calc(item) {
+        item.total = Number(item.purchase) + Number(item.repair) + Number(item.parts) + Number(item.ship);
+        let finalPrice = item.actual > 0 ? item.actual : item.expect;
+        item.profit = finalPrice - item.total;
+        item.roi = item.total > 0 ? ((item.profit / item.total) * 100).toFixed(1) : 0;
 
-    // 讀取資料
-    async function fetchData() {
-      msgEl.textContent = '讀取中...';
-      try {
-        const resp = await fetch(GAS_WEB_APP_URL + '?action=get');
-        const data = await resp.json();
-        renderTable(data);
-        msgEl.textContent = '';
-      } catch (e) {
-        msgEl.textContent = '讀取失敗';
-        msgEl.className = 'ms-3 text-danger';
-      }
-    }
-
-    // 渲染表格
-    function renderTable(data) {
-      const tbody = document.querySelector('#dataTable tbody');
-      tbody.innerHTML = '';
-      let sumCost = 0, sumExpected = 0, sumActual = 0;
-      
-      (data || []).forEach(row => {
-        const cost = parseFloat(row.cost) || 0;
-        const expected = parseFloat(row.expected) || 0;
-        const actual = parseFloat(row.actual) || 0;
-        const totalCost = cost;
-        const expProfit = expected - totalCost;
-        const actProfit = actual - totalCost;
-
-        sumCost += cost;
-        sumExpected += expected;
-        sumActual += actual;
-
-        const tr = document.createElement('tr');
-        // 為了方便編輯，我們把原始 row 資料轉成字串存在按鈕屬性中
-        const rowData = JSON.stringify(row).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
-        tr.innerHTML = `
-          <td class="text-center">${formatDate(row.date)}</td> 
-          <td>${row.name || ''}</td>
-          <td class="text-end">${formatNumber(cost)}</td>
-          <td class="text-end">${formatNumber(expected)}</td>
-          <td class="text-end">${formatNumber(actual)}</td>
-          <td class="text-end">${formatNumber(totalCost)}</td>
-          <td class="text-end">${formatNumber(expProfit)}</td>
-          <td class="text-end">${formatNumber(actProfit)}</td>
-          <td class="text-center">
-            <button class="btn btn-sm btn-warning mb-1" onclick='prepareEdit(${rowData})'>編輯</button>
-            <button class="btn btn-sm btn-danger mb-1" onclick="deleteRow(${row.rowIdx})">刪除</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      document.getElementById('sumCost').textContent = formatNumber(sumCost);
-      document.getElementById('sumExpected').textContent = formatNumber(sumExpected);
-      document.getElementById('sumActual').textContent = formatNumber(sumActual);
-      document.getElementById('sumTotalCost').textContent = formatNumber(sumCost);
-      document.getElementById('sumExpProfit').textContent = formatNumber(sumExpected - sumCost);
-      document.getElementById('sumActProfit').textContent = formatNumber(sumActual - sumCost);
-    }
-
-    // 刪除功能
-    async function deleteRow(rowIdx) {
-      if (!confirm('確定要刪除這筆資料嗎？')) return;
-      msgEl.textContent = '刪除中...';
-      try {
-        await fetch(`${GAS_WEB_APP_URL}?action=delete&rowIdx=${rowIdx}`, { method: 'POST' });
-        fetchData();
-      } catch (e) {
-        alert('刪除失敗');
-      }
-    }
-
-    // 進入編輯模式
-    function prepareEdit(data) {
-      document.getElementById('rowIdx').value = data.rowIdx;
-      document.getElementById('f_date').value = formatDate(data.date);
-      document.getElementById('f_name').value = data.name;
-      document.getElementById('f_cost').value = data.cost;
-      document.getElementById('f_expected').value = data.expected;
-      document.getElementById('f_actual').value = data.actual;
-
-      formCard.classList.add('editing');
-      submitBtn.textContent = '更新資料';
-      submitBtn.className = 'btn btn-warning';
-      cancelBtn.classList.remove('d-none');
-      window.scrollTo(0, 0); // 捲動回頂端方便編輯
-    }
-
-    // 重設表單狀態
-    function resetForm() {
-      form.reset();
-      document.getElementById('rowIdx').value = '';
-      formCard.classList.remove('editing');
-      submitBtn.textContent = '新增資料';
-      submitBtn.className = 'btn btn-primary';
-      cancelBtn.classList.add('d-none');
-    }
-
-    // 表單送出處理 (新增或更新)
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const rowIdx = document.getElementById('rowIdx').value;
-      const action = rowIdx ? 'update' : 'add';
-      
-      msgEl.textContent = rowIdx ? '更新中...' : '送出中...';
-      msgEl.className = 'ms-3 text-success';
-
-      const formData = new URLSearchParams(new FormData(form));
-      formData.append('action', action);
-
-      try {
-        const resp = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData.toString()
-        });
-        const result = await resp.json();
-        if (result.status === 'success') {
-          msgEl.textContent = rowIdx ? '更新成功' : '新增成功';
-          resetForm();
-          fetchData();
+        if(item.buyDate && item.sellDate) {
+            let d1 = new Date(item.buyDate);
+            let d2 = new Date(item.sellDate);
+            item.days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24));
+        } else if (item.buyDate) {
+            let d1 = new Date(item.buyDate);
+            let d2 = new Date();
+            item.days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + " (在庫)";
+        } else {
+            item.days = "-";
         }
-      } catch (err) {
-        msgEl.textContent = '操作失敗';
-        msgEl.className = 'ms-3 text-danger';
-      }
-    });
+    }
 
-    document.getElementById('refreshBtn').addEventListener('click', fetchData);
-    fetchData(); // 初始載入
-  </script>
+    // 核心功能：排序
+    function sortData() {
+        data.sort((a, b) => a.category.localeCompare(b.category, 'zh-Hans-CN'));
+    }
+
+    function handleSubmit() {
+        const id = document.getElementById("editId").innerText;
+        const item = {
+            id: id || Date.now().toString(), // 如果是新增，給一個新ID
+            category: document.getElementById("in_category").value,
+            name: document.getElementById("in_name").value || "未命名",
+            purchase: Number(document.getElementById("in_purchase").value),
+            repair: Number(document.getElementById("in_repair").value),
+            parts: Number(document.getElementById("in_parts").value),
+            ship: Number(document.getElementById("in_ship").value),
+            expect: Number(document.getElementById("in_expect").value),
+            actual: Number(document.getElementById("in_actual").value),
+            buyDate: document.getElementById("in_buyDate").value,
+            sellDate: document.getElementById("in_sellDate").value
+        };
+        calc(item);
+
+        if (!id) {
+            data.push(item);
+        } else {
+            const index = data.findIndex(d => d.id === id);
+            data[index] = item;
+        }
+
+        sortData(); // 儲存前先排序
+        save();
+        render();
+        resetForm();
+    }
+
+    function edit(id) {
+        const item = data.find(d => d.id === id.toString());
+        document.getElementById("in_category").value = item.category;
+        document.getElementById("in_name").value = item.name;
+        document.getElementById("in_purchase").value = item.purchase;
+        document.getElementById("in_repair").value = item.repair;
+        document.getElementById("in_parts").value = item.parts;
+        document.getElementById("in_ship").value = item.ship;
+        document.getElementById("in_expect").value = item.expect;
+        document.getElementById("in_actual").value = item.actual;
+        document.getElementById("in_buyDate").value = item.buyDate;
+        document.getElementById("in_sellDate").value = item.sellDate;
+
+        document.getElementById("editId").innerText = item.id;
+        document.getElementById("mainBtn").innerText = "儲存修改";
+        document.getElementById("mainBtn").style.background = "#2196f3";
+        document.getElementById("cancelBtn").style.display = "inline-block";
+        document.getElementById("inputPanel").classList.add("edit-mode");
+        window.scrollTo(0, 0);
+    }
+
+    function del(id) {
+        if(confirm("確定要刪除這筆資料嗎？")) {
+            data = data.filter(d => d.id !== id.toString());
+            save();
+            render();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById("in_name").value = "";
+        document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
+        document.getElementById("in_buyDate").value = "";
+        document.getElementById("in_sellDate").value = "";
+        document.getElementById("editId").innerText = "";
+        document.getElementById("mainBtn").innerText = "新增紀錄";
+        document.getElementById("mainBtn").style.background = "#4caf50";
+        document.getElementById("cancelBtn").style.display = "none";
+        document.getElementById("inputPanel").classList.remove("edit-mode");
+    }
+
+    function render() {
+        const listBody = document.getElementById("list");
+        listBody.innerHTML = "";
+        data.forEach((i) => {
+            // 顯示時把序號去掉，只顯示純中文
+            const cleanCategory = i.category.split('_')[1];
+            listBody.innerHTML += `
+            <tr>
+                <td style="color:#4caf50; font-weight:bold;">${cleanCategory}</td>
+                <td>${i.name}</td>
+                <td>${i.total}</td>
+                <td class="expected">${i.expect}</td>
+                <td style="font-size: 1.1em; color: ${i.actual > 0 ? '#fff' : '#666'}">${i.actual > 0 ? i.actual : '尚未售出'}</td>
+                <td class="${i.profit >= 0 ? 'profit' : 'loss'}">${i.profit}</td>
+                <td>${i.roi}%</td>
+                <td>${i.days}</td>
+                <td>
+                    <button class="btn-edit" onclick="edit('${i.id}')">編輯</button>
+                    <button class="btn-del" onclick="del('${i.id}')">刪除</button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    render();
+</script>
+
 </body>
 </html>
