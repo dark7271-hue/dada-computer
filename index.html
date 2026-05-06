@@ -2,142 +2,200 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存 - 強制版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🖥️ 翻修進銷存系統</title>
     <style>
         :root {
-            --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
-            --accent: #2196f3; --text: #e0e0e0; --border: #333;
+            --bg-color: #0d0d0d;
+            --card-bg: #1c1c1e;
+            --input-bg: #2c2c2e;
+            --primary: #46b760;
+            --text-main: #ffffff;
+            --text-sub: #8e8e93;
+            --border: #3a3a3c;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 10px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        h2 { text-align: center; color: var(--primary); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; }
         
-        /* 統計面板 */
-        .summary-bar { display: flex; gap: 10px; margin-bottom: 15px; }
-        .summary-item { flex: 1; background: var(--card-bg); padding: 10px; border-radius: 8px; text-align: center; border-bottom: 3px solid var(--primary); }
-        .summary-item b { font-size: 1.2em; color: #fff; }
+        h2 { text-align: center; color: var(--primary); font-size: 24px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
 
-        /* 輸入區 */
-        .input-group { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
-        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-        input, select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; }
-        
-        .btn-main { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 15px; cursor: pointer; }
-        .sync-status { text-align: center; font-size: 0.8em; color: var(--accent); margin-bottom: 10px; }
+        /* 統計面板 - 參照圖片 */
+        .summary-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .summary-item { background: var(--card-bg); padding: 12px 5px; border-radius: 10px; text-align: center; border-bottom: 2px solid #2d5a36; }
+        .summary-item span { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
+        .summary-item b { font-size: 18px; color: var(--text-main); }
+        .summary-item b.money { color: var(--text-main); }
 
-        /* 響應式佈局 */
-        .desktop-table { width: 100%; border-collapse: collapse; display: none; background: var(--card-bg); }
-        .desktop-table th, td { padding: 10px; border: 1px solid var(--border); text-align: center; }
-        .mobile-list { display: flex; flex-direction: column; gap: 10px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); }
+        /* 輸入區域卡片 */
+        .input-card { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 25px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .full-width { grid-column: span 2; }
         
-        @media (min-width: 768px) {
-            .desktop-table { display: table; }
-            .mobile-list { display: none; }
-            .input-grid { grid-template-columns: repeat(4, 1fr); }
-        }
-        .profit { color: var(--primary); }
-        .loss { color: #f44336; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 13px; color: var(--text-sub); margin-left: 2px; }
+        input, select { background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: white; font-size: 16px; outline: none; }
+        input:focus { border-color: var(--primary); }
+
+        .btn-submit { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 15px; font-size: 18px; font-weight: bold; width: 100%; margin-top: 20px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-submit:active { opacity: 0.8; }
+
+        /* 列表部分 */
+        .list-header { color: var(--primary); font-weight: bold; margin: 15px 0 10px; padding-left: 5px; border-left: 3px solid var(--primary); }
+        .item-list { display: flex; flex-direction: column; gap: 12px; }
+        .item-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .item-info { display: flex; flex-direction: column; gap: 4px; }
+        .item-name { font-weight: bold; font-size: 16px; }
+        .item-meta { font-size: 12px; color: var(--text-sub); }
+        .item-price { text-align: right; }
+        .profit-text { color: var(--primary); font-weight: bold; font-size: 16px; }
+        .loss-text { color: #ff453a; font-weight: bold; font-size: 16px; }
+        
+        .sync-status { text-align: center; font-size: 12px; color: var(--text-sub); margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🖥️ 翻修進銷存 (雲端同步)</h2>
-    <div id="syncIndicator" class="sync-status">雲端同步中...</div>
+    <h2>💻 翻修進銷存系統</h2>
+    <div id="status" class="sync-status">雲端同步中...</div>
 
+    <!-- 統計數據 -->
     <div class="summary-bar">
-        <div class="summary-item"><span>在庫</span><b id="count_stock">0</b></div>
-        <div class="summary-item"><span>已售</span><b id="count_sold">0</b></div>
-        <div class="summary-item"><span>獲利</span><b id="total_profit">$0</b></div>
+        <div class="summary-item"><span>在庫項目</span><b id="count_stock">0</b></div>
+        <div class="summary-item"><span>已售項目</span><b id="count_sold">0</b></div>
+        <div class="summary-item"><span>累計獲利</span><b id="total_profit">$0</b></div>
     </div>
 
-    <div class="input-group">
+    <!-- 輸入表單 -->
+    <div class="input-card">
         <div class="input-grid">
-            <select id="in_category"><option value="1_整機">整機</option><option value="2_零件">零件</option></select>
-            <input id="in_name" placeholder="規格名稱">
-            <input id="in_purchase" type="number" placeholder="成本">
-            <input id="in_buyDate" type="date">
-            <input id="in_actual" type="number" placeholder="實際售價">
-            <input id="in_sellDate" type="date">
+            <div class="input-group">
+                <label>分類</label>
+                <select id="in_category">
+                    <option value="整機">整機</option>
+                    <option value="零件">零件</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>品項名稱</label>
+                <input id="in_name" placeholder="規格型號">
+            </div>
+            <div class="input-group">
+                <label>收購/總成本</label>
+                <input id="in_purchase" type="number" value="0">
+            </div>
+            <div class="input-group">
+                <label>買入日期</label>
+                <input id="in_buyDate" type="date">
+            </div>
+            <div class="input-group">
+                <label>預計售價</label>
+                <input id="in_expect" type="number" value="0">
+            </div>
+            <div class="input-group">
+                <label>實際售價</label>
+                <input id="in_actual" type="number" value="0">
+            </div>
+            <div class="input-group full-width">
+                <label>賣出日期</label>
+                <input id="in_sellDate" type="date">
+            </div>
         </div>
-        <button class="btn-main" onclick="handleSubmit()">新增並同步到雲端</button>
+        <button class="btn-submit" onclick="handleSubmit()">新增紀錄</button>
     </div>
 
-    <table class="desktop-table">
-        <thead><tr><th>分類</th><th>名稱</th><th>成本</th><th>利潤</th><th>狀態</th></tr></thead>
-        <tbody id="pc_tbody"></tbody>
-    </table>
-    <div class="mobile-list" id="mobile_list"></div>
+    <div class="list-header">近期紀錄</div>
+    <div class="item-list" id="display_list"></div>
 </div>
 
 <script>
-    const cloudUrl = "https://script.google.com/macros/s/AKfycbxnzRhThsLybN4_rnouTLdn_2w4F8UKuqtiL8_MpSrEXqmxwZtz4uX6_rRpgvzGRVMz/exec"; // <--- 請務必換成你的網址
-    let data = JSON.parse(localStorage.getItem("pcData") || "[]");
+    // 請替換為你的 Google Apps Script 部署網址
+    const cloudUrl = "https://script.google.com/macros/s/AKfycbwekfeIe022l7YxoMGAcn2fsCck3ZsPDPdI_UsteFdHOvaSNCtmnXxQCxbd7k2HUSzj/exec"; 
+    let localData = JSON.parse(localStorage.getItem("pcData") || "[]");
 
-    // 核心優化 1：開啟網頁立即抓取雲端資料
-    window.onload = async () => {
-        render(); // 先畫出舊的
-        await loadFromCloud(); 
+    window.onload = () => {
+        render();
+        loadFromCloud();
     };
 
     async function loadFromCloud() {
         try {
             const res = await fetch(cloudUrl);
-            const cloudData = await res.json();
-            if (cloudData && cloudData.length > 0) {
-                data = cloudData;
-                localStorage.setItem("pcData", JSON.stringify(data));
+            const data = await res.json();
+            if (data) {
+                localData = data;
+                localStorage.setItem("pcData", JSON.stringify(localData));
                 render();
-                document.getElementById("syncIndicator").innerText = "● 雲端連線正常";
+                document.getElementById("status").innerText = "● 雲端已同步";
             }
         } catch (e) {
-            document.getElementById("syncIndicator").innerText = "○ 離線模式";
+            document.getElementById("status").innerText = "○ 離線模式";
         }
     }
 
     async function handleSubmit() {
+        const btn = document.querySelector(".btn-submit");
         const item = {
             id: Date.now().toString(),
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
             purchase: Number(document.getElementById("in_purchase").value),
-            actual: Number(document.getElementById("in_actual").value),
             buyDate: document.getElementById("in_buyDate").value,
+            expect: Number(document.getElementById("in_expect").value),
+            actual: Number(document.getElementById("in_actual").value),
             sellDate: document.getElementById("in_sellDate").value
         };
 
-        // 核心優化 2：先更新本地，再推雲端，最後再抓一次雲端確保對齊
-        data.push(item);
+        // UI 立即反應
+        localData.unshift(item);
         render();
-        
-        document.getElementById("syncIndicator").innerText = "上傳中...";
-        await fetch(cloudUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(item) });
-        
-        setTimeout(loadFromCloud, 1500); // 延遲一下抓回最新排序後的資料
+        btn.innerText = "同步中...";
+        btn.disabled = true;
+
+        try {
+            await fetch(cloudUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(item) });
+            document.getElementById("status").innerText = "資料已上傳試算表";
+            setTimeout(loadFromCloud, 1000);
+        } catch (e) {
+            alert("同步失敗，資料僅存於本地");
+        } finally {
+            btn.innerText = "新增紀錄";
+            btn.disabled = false;
+            // 清空部分欄位
+            document.getElementById("in_name").value = "";
+            document.getElementById("in_actual").value = 0;
+        }
     }
 
     function render() {
-        const pcTbody = document.getElementById("pc_tbody");
-        const mobList = document.getElementById("mobile_list");
-        pcTbody.innerHTML = ""; mobList.innerHTML = "";
-        
-        let sCount = 0, soldCount = 0, totalP = 0;
+        const listDiv = document.getElementById("display_list");
+        listDiv.innerHTML = "";
+        let stock = 0, sold = 0, profit = 0;
 
-        data.forEach(i => {
-            const isSold = i.actual > 0;
-            const profit = (i.actual || 0) - i.purchase;
-            if(isSold) { soldCount++; totalP += profit; } else { sCount++; }
+        localData.forEach(i => {
+            const isSold = Number(i.actual) > 0;
+            const itemProfit = isSold ? (Number(i.actual) - Number(i.purchase)) : 0;
+            
+            if(isSold) { sold++; profit += itemProfit; } else { stock++; }
 
-            const html = `<div>${i.name} | 成本:$${i.purchase} | <span class="${profit >=0 ? 'profit' : 'loss'}">利潤:$${profit}</span></div>`;
-            pcTbody.innerHTML += `<tr><td>${i.category}</td><td>${i.name}</td><td>${i.purchase}</td><td>${profit}</td><td>${isSold?'已售':'在庫'}</td></tr>`;
-            mobList.innerHTML += `<div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}">${html}</div>`;
+            listDiv.innerHTML += `
+                <div class="item-card">
+                    <div class="item-info">
+                        <span class="item-name">${i.category} - ${i.name}</span>
+                        <span class="item-meta">成本: $${i.purchase} | ${isSold ? '售出: '+i.sellDate : '在庫'}</span>
+                    </div>
+                    <div class="item-price">
+                        <span class="${itemProfit >= 0 ? 'profit-text' : 'loss-text'}">
+                            ${isSold ? '$'+itemProfit : '預售 $'+i.expect}
+                        </span>
+                    </div>
+                </div>
+            `;
         });
 
-        document.getElementById("count_stock").innerText = sCount;
-        document.getElementById("count_sold").innerText = soldCount;
-        document.getElementById("total_profit").innerText = "$" + totalP;
+        document.getElementById("count_stock").innerText = stock;
+        document.getElementById("count_sold").innerText = sold;
+        document.getElementById("total_profit").innerText = "$" + profit;
     }
 </script>
 </body>
