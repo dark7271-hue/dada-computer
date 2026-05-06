@@ -1,111 +1,156 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<title>翻修進銷存01</title>
-
 <style>
-body { background:#111; color:#eee; font-family:Arial; padding:20px;}
-input { margin:5px; padding:8px;}
-button { padding:8px;}
-.card { background:#222; padding:10px; margin:10px 0; border-radius:8px;}
-.profit{color:#4caf50;} .loss{color:#f44336;}
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --primary: #22c55e;
+  --accent: #3b82f6;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont;
+  background: linear-gradient(135deg, #0f172a, #020617);
+  color: var(--text);
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+}
+
+/* 🔥 KPI卡片 */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 15px;
+}
+
+.summary-item {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+.summary-item span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.summary-item b {
+  font-size: 26px;
+  display: block;
+  margin-top: 5px;
+}
+
+/* 🔥 輸入卡片 */
+.input-group {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 16px;
+  margin-top: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  gap: 12px;
+}
+
+label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+input, select {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #020617;
+  color: white;
+}
+
+/* 🔥 按鈕 */
+.btn {
+  border-radius: 10px;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-main {
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  color: white;
+}
+
+.btn-cancel {
+  background: #475569;
+  color: white;
+}
+
+/* 🔥 表格 */
+.desktop-table {
+  margin-top: 20px;
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.desktop-table th {
+  background: #020617;
+  padding: 12px;
+  color: var(--accent);
+}
+
+.desktop-table td {
+  padding: 12px;
+  background: var(--card);
+  border-bottom: 1px solid #334155;
+}
+
+.desktop-table tr:hover td {
+  background: #020617;
+}
+
+/* 🔥 卡片 */
+.card {
+  background: var(--card);
+  padding: 15px;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 🔥 利潤顏色 */
+.profit { color: #22c55e; }
+.loss { color: #ef4444; }
+
+/* 手機 */
+@media(max-width:768px){
+  .desktop-table { display:none; }
+}
 </style>
-</head>
-
-<body>
-
-<h2>🖥️ 翻修進銷存（雲端同步）</h2>
-
-<input id="name" placeholder="名稱">
-<input id="cost" type="number" placeholder="成本">
-<input id="price" type="number" placeholder="售價">
-
-<button onclick="save()">新增 / 更新</button>
-
-<hr>
-
-<div id="list"></div>
-
-<script>
-
-const API = "https://script.google.com/macros/s/AKfycbwLnz3qf9BUd3x_QOR8-iNVQfTcMSum8GPi0YR7eEN8w2NNcjFXPww8l8pfvThJMKji/exec";
-
-let data = [];
-let editId = "";
-
-// 讀取
-async function load(){
-  const res = await fetch(API);
-  data = await res.json();
-
-  render();
-}
-
-// 新增 / 更新
-async function save(){
-  const item = {
-    id: editId || Date.now().toString(),
-    name: name.value,
-    purchase: Number(cost.value),
-    actual: Number(price.value)
-  };
-
-  await fetch(API, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify(item)
-  });
-
-  editId = "";
-  name.value = "";
-  cost.value = "";
-  price.value = "";
-
-  load();
-}
-
-// 刪除
-async function del(id){
-  await fetch(API + "?id=" + id, { method:"DELETE" });
-  load();
-}
-
-// 編輯
-function edit(id){
-  const i = data.find(d=>d.id==id);
-  editId = id;
-  name.value = i.name;
-  cost.value = i.purchase;
-  price.value = i.actual;
-}
-
-// 顯示
-function render(){
-  let html = "";
-
-  data.reverse().forEach(d=>{
-    const profit = d.actual - d.purchase;
-
-    html += `
-      <div class="card">
-        <b>${d.name}</b><br>
-        成本:${d.purchase} / 售價:${d.actual}<br>
-        利潤:<span class="${profit>=0?'profit':'loss'}">${profit}</span><br>
-        <button onclick="edit('${d.id}')">編輯</button>
-        <button onclick="del('${d.id}')">刪除</button>
-      </div>
-    `;
-  });
-
-  list.innerHTML = html;
-}
-
-// 自動同步
-setInterval(load, 5000);
-load();
-
-</script>
-
-</body>
-</html>
