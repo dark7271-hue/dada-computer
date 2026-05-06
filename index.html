@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存穩定版</title>
+    <title>電腦翻修進銷存 V5.1</title>
     <style>
-        :root {
-            --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
-            --accent: #2196f3; --text: #e0e0e0; --border: #333;
-        }
-        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 10px; }
+        :root { --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50; --accent: #2196f3; --text: #e0e0e0; --border: #333; --danger: #f44336; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: var(--text); margin: 0; padding: 10px; }
         .container { max-width: 1000px; margin: 0 auto; }
         h2 { text-align: center; color: var(--primary); margin: 15px 0; }
         .sync-status { text-align: center; font-size: 0.85em; margin-bottom: 10px; padding: 5px; border-radius: 5px; background: rgba(255,255,255,0.05); }
@@ -21,27 +18,29 @@
         .input-item { display: flex; flex-direction: column; }
         label { font-size: 0.8em; color: #888; margin-bottom: 4px; }
         input, select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; }
-        .btn-row { display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end; }
-        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-main { background: var(--primary); color: white; flex-grow: 1; }
-        .btn-main:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; }
+        .btn-main { background: var(--primary); color: white; }
+        .btn-reset { background: #444; color: #ccc; max-width: 80px; }
         .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
         .desktop-table th, .desktop-table td { padding: 12px; border: 1px solid var(--border); text-align: center; }
         .mobile-list { display: flex; flex-direction: column; gap: 12px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        @media (min-width: 768px) {
-            .desktop-table { display: table; }
-            .mobile-list { display: none; }
-            .input-grid { grid-template-columns: repeat(4, 1fr); }
-        }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); position: relative; }
+        .btn-del-sm { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        @media (min-width: 768px) { .desktop-table { display: table; } .mobile-list { display: none; } .input-grid { grid-template-columns: repeat(4, 1fr); } }
         .profit { color: var(--primary); font-weight: bold; }
-        .loss { color: #f44336; font-weight: bold; }
+        .loss { color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>🖥️ 翻修進銷存系統</h2>
-    <div id="syncStatus" class="sync-status" style="color: var(--accent);">📡 正在初始化系統...</div>
+    <div id="syncStatus" class="sync-status">📡 正在初始化系統...</div>
+    
+    <div style="text-align:center; margin-bottom:15px;">
+        <button onclick="loadFromCloud()" style="background:none; border:1px solid #555; color:#888; padding:4px 10px; border-radius:4px; font-size:12px;">🔄 手動同步雲端</button>
+        <button onclick="if(confirm('確定清空手機快取？')){localStorage.clear(); location.reload();}" style="background:none; border:1px solid #555; color:#888; padding:4px 10px; border-radius:4px; font-size:12px;">🗑️ 重置本地資料</button>
+    </div>
 
     <div class="summary-bar">
         <div class="summary-item"><span>在庫</span><b id="count_stock">0</b></div>
@@ -49,7 +48,7 @@
         <div class="summary-item"><span>獲利</span><b id="total_profit">$0</b></div>
     </div>
 
-    <div class="input-group" id="inputPanel">
+    <div class="input-group">
         <div class="input-grid">
             <div class="input-item"><label>分類</label>
                 <select id="in_category">
@@ -69,7 +68,8 @@
         </div>
         <div class="btn-row">
             <span id="editId" style="display:none"></span>
-            <button id="mainBtn" class="btn btn-main" onclick="handleSubmit()">儲存並同步到雲端</button>
+            <button class="btn btn-reset" onclick="resetForm()">重填</button>
+            <button id="mainBtn" class="btn btn-main" onclick="handleSubmit()">儲存並同步雲端</button>
         </div>
     </div>
 
@@ -81,94 +81,42 @@
 </div>
 
 <script>
-    // ✅ 請確保此網址為 GAS 最新部署的版本
-    const cloudUrl = "https://script.google.com/macros/s/AKfycbw7QSVl4LsY9jylU_Dgf7Qoy5cAqiR14S_v-XOS2LetUZTvMVHOzy9nziLsHWyaXiaj/exec";
-
+    const cloudUrl = "https://script.google.com/macros/s/AKfycby-_TV-2TQ4BEMmEDBRjPFC4Ff3wbp32jJAdCEDrnAUGNrlGclLFkKbB4dcbZooUtpd/exec";
     let data = [];
-    try {
-        data = JSON.parse(localStorage.getItem("pcData") || "[]");
-    } catch(e) {
-        data = [];
-    }
-
+    try { data = JSON.parse(localStorage.getItem("pcData") || "[]"); } catch(e) { data = []; }
     let isSyncing = false;
 
-    window.onload = () => {
-        render(); // 初始化渲染，這版本不會因為壞資料當機
-        loadFromCloud();
-        setInterval(loadFromCloud, 30000); // 每 30 秒自動檢查一次
-    };
+    window.onload = () => { render(); loadFromCloud(); setInterval(loadFromCloud, 60000); };
 
     function loadFromCloud() {
         if (isSyncing) return;
         isSyncing = true;
         const statusEl = document.getElementById("syncStatus");
-        statusEl.innerText = "🔄 正在從雲端讀取...";
-        statusEl.style.color = "#2196f3";
-
+        statusEl.innerText = "🔄 正在同步雲端...";
         const cbName = "gasCallback_" + Date.now();
         const script = document.createElement("script");
-        let done = false;
-
-        const timer = setTimeout(() => {
-            if (done) return;
-            done = true;
-            cleanup();
-            statusEl.innerText = "⚠️ 雲端連線逾時，使用本地資料";
-            statusEl.style.color = "#ff9800";
-            isSyncing = false;
-        }, 10000);
-
-        window[cbName] = function(cloudData) {
-            if (done) return;
-            done = true;
-            cleanup();
-            clearTimeout(timer);
-
+        window[cbName] = (cloudData) => {
             if (Array.isArray(cloudData)) {
-                // 合併資料：以 id 為主，雲端優先
                 const map = new Map();
-                data.forEach(i => { if(i && i.id) map.set(String(i.id), i); });
-                cloudData.forEach(i => { if(i && i.id) map.set(String(i.id), i); });
-                
+                data.forEach(i => { if(i.id) map.set(String(i.id), i); });
+                cloudData.forEach(i => { if(i.id) map.set(String(i.id), i); });
                 data = Array.from(map.values());
                 localStorage.setItem("pcData", JSON.stringify(data));
                 render();
-                
-                const now = new Date();
-                statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')})`;
-                statusEl.style.color = "#4caf50";
-            } else {
-                statusEl.innerText = "⚠️ 雲端資料格式異常";
-                statusEl.style.color = "#ff9800";
+                statusEl.innerText = `✅ 同步完成 (${new Date().toLocaleTimeString()})`;
             }
-            isSyncing = false;
-        };
-
-        function cleanup() {
-            delete window[cbName];
-            if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        script.onerror = function() {
-            if (done) return;
-            done = true;
             cleanup();
-            clearTimeout(timer);
-            statusEl.innerText = "⚠️ 目前為離線模式";
-            statusEl.style.color = "#ff9800";
-            isSyncing = false;
         };
-
+        function cleanup() { delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); isSyncing = false; }
         script.src = cloudUrl + "?callback=" + cbName + "&t=" + Date.now();
+        script.onerror = () => { statusEl.innerText = "⚠️ 離線模式"; isSyncing = false; };
         document.head.appendChild(script);
     }
 
     async function handleSubmit() {
-        const btn = document.getElementById("mainBtn");
-        const id = document.getElementById("editId").innerText;
+        const id = document.getElementById("editId").innerText || Date.now().toString();
         const item = {
-            id: id || Date.now().toString(),
+            id: id,
             category: document.getElementById("in_category").value,
             name: document.getElementById("in_name").value || "未命名",
             purchase: Number(document.getElementById("in_purchase").value) || 0,
@@ -177,103 +125,56 @@
             buyDate: document.getElementById("in_buyDate").value,
             sellDate: document.getElementById("in_sellDate").value
         };
-
-        // 立即更新本地
-        const map = new Map(data.map(i => [String(i.id), i]));
-        map.set(String(item.id), item);
-        data = Array.from(map.values());
+        data = data.filter(i => String(i.id) !== String(id));
+        data.push(item);
         localStorage.setItem("pcData", JSON.stringify(data));
         render();
-
-        btn.disabled = true;
-        btn.innerText = "正在同步至雲端...";
-
+        resetForm();
         try {
-            await fetch(cloudUrl, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify(item)
-            });
-            document.getElementById("syncStatus").innerText = "🚀 資料已送出，等待雲端確認...";
-            resetForm();
-            setTimeout(loadFromCloud, 3000);
-        } catch (e) {
-            document.getElementById("syncStatus").innerText = "⚠️ 網路異常，資料已暫存本地";
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "儲存並同步到雲端";
-        }
+            await fetch(cloudUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(item) });
+            loadFromCloud();
+        } catch(e) { console.error(e); }
+    }
+
+    async function delItem(id) {
+        if (!confirm("確定要刪除嗎？雲端也會一併刪除。")) return;
+        data = data.filter(i => String(i.id) !== String(id));
+        localStorage.setItem("pcData", JSON.stringify(data));
+        render();
+        try {
+            await fetch(cloudUrl, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", id: id }) });
+            loadFromCloud();
+        } catch(e) { console.error(e); }
     }
 
     function render() {
         const pcTbody = document.getElementById("pc_tbody");
         const mobList = document.getElementById("mobile_list");
-        if (!pcTbody || !mobList) return;
-
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
-
-        // 強化防呆：確保資料合法且排除 undefined
-        const safeData = data.filter(i => i && i.id);
         
-        safeData.sort((a, b) => String(a.category || "").localeCompare(String(b.category || "")));
+        const safeData = data.filter(i => i && i.id).sort((a,b) => String(a.category).localeCompare(String(b.category)));
 
         safeData.forEach(i => {
-            const purchase = Number(i.purchase) || 0;
-            const actual = Number(i.actual) || 0;
-            const expect = Number(i.expect) || 0;
-            
-            const isSold = actual > 0;
-            const finalPrice = isSold ? actual : expect;
-            const profit = finalPrice - purchase;
-            
+            const purchase = Number(i.purchase) || 0, actual = Number(i.actual) || 0, expect = Number(i.expect) || 0;
+            const isSold = actual > 0, profit = (isSold ? actual : expect) - purchase;
             if (isSold) { soldCount++; totalP += profit; } else { sCount++; }
+            const catName = String(i.category || "").includes('_') ? i.category.split('_')[1] : (i.category || "未分類");
 
-            // 關鍵防呆：確保 category 為字串才使用 includes
-            let catName = "未分類";
-            const rawCat = String(i.category || "");
-            if (rawCat) {
-                catName = rawCat.includes('_') ? rawCat.split('_')[1] : rawCat;
-            }
+            pcTbody.innerHTML += `<tr><td>${catName}</td><td>${i.name}</td><td>$${purchase}</td><td class="${profit>=0?'profit':'loss'}">$${profit}</td><td>${isSold?'✅已售':'📦在庫'}</td>
+                <td><button onclick="edit('${i.id}')">改</button><button onclick="delItem('${i.id}')" style="background:var(--danger);color:white;border:none;margin-left:5px;border-radius:4px;">刪</button></td></tr>`;
 
-            const displayName = i.name || "未命名";
-
-            pcTbody.innerHTML += `
-                <tr>
-                    <td>${catName}</td><td>${displayName}</td><td>$${purchase}</td>
-                    <td class="${profit >= 0 ? 'profit' : 'loss'}">$${profit}</td>
-                    <td>${isSold ? '✅已售' : '📦在庫'}</td>
-                    <td><button onclick="edit('${i.id}')">改</button></td>
-                </tr>`;
-
-            mobList.innerHTML += `
-                <div class="card" style="border-left-color:${isSold ? '#4caf50' : '#ff9800'}" onclick="edit('${i.id}')">
-                    <div style="display:flex; justify-content:space-between;">
-                        <b>${displayName}</b><small>${catName}</small>
-                    </div>
-                    <div style="font-size:0.9em; margin-top:5px; color:#bbb;">
-                        成本: $${purchase} | ${isSold ? `售價: $${actual} | <span class="profit">利潤: $${profit}</span>` : `預計: $${expect}`}
-                    </div>
-                    <div style="text-align:right; font-size:0.8em; margin-top:5px;">
-                        ${isSold ? '✅ 已售出' : '📦 庫存中'}
-                    </div>
-                </div>`;
+            mobList.innerHTML += `<div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}" onclick="edit('${i.id}')">
+                <div style="display:flex;justify-content:space-between;"><b>${i.name}</b><small>${catName}</small></div>
+                <div style="font-size:0.9em;margin-top:5px;color:#bbb;">成本:$${purchase} | ${isSold?`售價:$${actual} | <span class="profit">利潤:$${profit}</span>` : `預計:$${expect}`}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                    <span style="font-size:0.8em;">${isSold?'✅已售':'📦在庫'}</span>
+                    <button class="btn-del-sm" onclick="event.stopPropagation(); delItem('${i.id}')">刪除</button>
+                </div></div>`;
         });
-
         document.getElementById("count_stock").innerText = sCount;
         document.getElementById("count_sold").innerText = soldCount;
         document.getElementById("total_profit").innerText = "$" + totalP.toLocaleString();
-    }
-
-    function resetForm() {
-        document.getElementById("in_name").value = "";
-        document.getElementById("in_purchase").value = 0;
-        document.getElementById("in_expect").value = 0;
-        document.getElementById("in_actual").value = 0;
-        document.getElementById("editId").innerText = "";
-        document.getElementById("in_buyDate").value = "";
-        document.getElementById("in_sellDate").value = "";
     }
 
     function edit(id) {
@@ -288,6 +189,13 @@
         document.getElementById("in_buyDate").value = item.buyDate || "";
         document.getElementById("in_sellDate").value = item.sellDate || "";
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById("editId").innerText = "";
+        document.getElementById("in_name").value = "";
+        document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
+        document.querySelectorAll("input[type='date']").forEach(i => i.value = "");
     }
 </script>
 </body>
