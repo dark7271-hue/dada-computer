@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>電腦翻修進銷存 - 強制同步版</title>
+    <title>電腦翻修進銷存 - G穩定同步版</title>
     <style>
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --primary: #4caf50;
@@ -13,8 +13,14 @@
         .container { max-width: 1000px; margin: 0 auto; }
         h2 { text-align: center; color: var(--primary); margin: 15px 0; }
 
-        /* 狀態指示燈 */
-        .sync-status { text-align: center; font-size: 0.8em; margin-bottom: 10px; color: var(--accent); }
+        .sync-status { 
+            text-align: center; 
+            font-size: 0.85em; 
+            margin-bottom: 10px; 
+            padding: 5px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+        }
 
         .summary-bar { display: flex; gap: 10px; margin-bottom: 15px; }
         .summary-item { flex: 1; background: var(--card-bg); padding: 10px; border-radius: 8px; text-align: center; border-bottom: 3px solid var(--primary); }
@@ -34,7 +40,13 @@
         .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
         .desktop-table th, .desktop-table td { padding: 12px; border: 1px solid var(--border); text-align: center; }
         .mobile-list { display: flex; flex-direction: column; gap: 12px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); }
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 10px; 
+            padding: 15px; 
+            border-left: 5px solid var(--primary);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
         
         @media (min-width: 768px) {
             .desktop-table { display: table; }
@@ -49,7 +61,7 @@
 
 <div class="container">
     <h2>🖥️ 翻修進銷存系統</h2>
-    <div id="syncStatus" class="sync-status">📡 正在檢查雲端連線...</div>
+    <div id="syncStatus" class="sync-status" style="color: var(--accent);">📡 正在初始化系統...</div>
 
     <div class="summary-bar">
         <div class="summary-item"><span>在庫</span><b id="count_stock">0</b></div>
@@ -81,34 +93,49 @@
 </div>
 
 <script>
+    // 請確認此網址已正確發佈為「所有人都能存取」
     const cloudUrl = "https://script.google.com/macros/s/AKfycbzTUCzO7Lx7XAi90_Sr9aHEyMfZdGIrdZG9lkwfI42w4-jDW-ZwGkMNf70rSxddGxcp/exec";
+    
     let data = JSON.parse(localStorage.getItem("pcData") || "[]");
+    let isSyncing = false;
 
     window.onload = () => {
         render();
         loadFromCloud();
-     // 每5秒同步（手機關鍵）
-    setInterval(loadFromCloud, 5000);
-};
+        // 手機端建議調降頻率至 20 秒，避免請求衝突
+        setInterval(loadFromCloud, 20000);
+    };
 
     async function loadFromCloud() {
+        if (isSyncing) return;
+        isSyncing = true;
+        const statusEl = document.getElementById("syncStatus");
+        
         try {
-            const res = await fetch(cloudUrl);
+            // 使用 GET 獲取資料，增加 cache: 'no-cache' 確保抓到最新的
+            const res = await fetch(cloudUrl, { method: "GET", cache: 'no-cache' });
             const cloudData = await res.json();
-            if (cloudData) {
-const map = new Map();
+            
+            if (Array.isArray(cloudData)) {
+                const map = new Map();
+                // 優先使用雲端資料覆蓋本地
+                data.forEach(i => map.set(i.id.toString(), i));
+                cloudData.forEach(i => map.set(i.id.toString(), i));
 
-[...data, ...cloudData].forEach(i => {
-    map.set(i.id, i);
-});
-
-data = Array.from(map.values());
+                data = Array.from(map.values());
                 localStorage.setItem("pcData", JSON.stringify(data));
                 render();
-                document.getElementById("syncStatus").innerText = "✅ 雲端同步完成";
+                
+                const now = new Date();
+                statusEl.innerText = `✅ 雲端同步完成 (${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')})`;
+                statusEl.style.color = "#4caf50";
             }
         } catch (e) {
-            document.getElementById("syncStatus").innerText = "⚠️ 離線模式 (僅讀取本機)";
+            console.error("Sync Error:", e);
+            statusEl.innerText = "⚠️ 目前為離線模式 (或伺服器喚醒中)";
+            statusEl.style.color = "#ff9800";
+        } finally {
+            isSyncing = false;
         }
     }
 
@@ -126,26 +153,32 @@ data = Array.from(map.values());
             sellDate: document.getElementById("in_sellDate").value
         };
 
+        // 先更新本地 UI（提升使用者體驗：Optimistic UI）
+        const map = new Map(data.map(i => [i.id.toString(), i]));
+        map.set(item.id.toString(), item);
+        data = Array.from(map.values());
+        localStorage.setItem("pcData", JSON.stringify(data));
+        render();
+
         btn.disabled = true;
-        btn.innerText = "同步中...";
+        btn.innerText = "正在同步至雲端...";
 
         try {
-            // 關鍵修改：不使用 no-cors，改用正常模式
-await fetch(cloudUrl, {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify(item)
-});
+            // 使用 no-cors 解決手機瀏覽器最常見的跨網域攔截問題
+            await fetch(cloudUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(item)
+            });
             
-// 等GAS寫入完成（關鍵）
-setTimeout(async () => {
-    await loadFromCloud();
-}, 1200);
+            document.getElementById("syncStatus").innerText = "🚀 資料已排隊送出";
             resetForm();
+            
+            // 延後兩秒抓取雲端最新狀態，給 GAS 一點時間處理
+            setTimeout(loadFromCloud, 2000);
         } catch (e) {
-            alert("同步失敗，請確認網路連線！");
+            alert("同步失敗，資料已暫存在手機。");
         } finally {
             btn.disabled = false;
             btn.innerText = "儲存並同步到雲端";
@@ -156,6 +189,7 @@ setTimeout(async () => {
         document.getElementById("in_name").value = "";
         document.querySelectorAll("input[type='number']").forEach(i => i.value = 0);
         document.getElementById("editId").innerText = "";
+        document.getElementById("in_sellDate").value = "";
     }
 
     function render() {
@@ -164,19 +198,49 @@ setTimeout(async () => {
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
 
+        // 排序：先按分類，再按狀態
+        data.sort((a,b) => a.category.localeCompare(b.category));
+
         data.forEach(i => {
             const isSold = Number(i.actual) > 0;
             const finalPrice = isSold ? i.actual : i.expect;
             const profit = finalPrice - i.purchase;
+            
             if(isSold) { soldCount++; totalP += profit; } else { sCount++; }
 
-            pcTbody.innerHTML += `<tr><td>${i.category.split('_')[1]}</td><td>${i.name}</td><td>$${i.purchase}</td><td class="${profit>=0?'profit':'loss'}">$${profit}</td><td>${isSold?'已售':'在庫'}</td><td><button onclick="edit('${i.id}')">改</button></td></tr>`;
-            mobList.innerHTML += `<div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}"><b>${i.name}</b><br>利潤: <span class="${profit>=0?'profit':'loss'}">$${profit}</span></div>`;
+            const catName = i.category.includes('_') ? i.category.split('_')[1] : i.category;
+
+            // 桌面版表格
+            pcTbody.innerHTML += `
+                <tr>
+                    <td>${catName}</td>
+                    <td>${i.name}</td>
+                    <td>$${i.purchase}</td>
+                    <td class="${profit>=0?'profit':'loss'}">$${profit}</td>
+                    <td>${isSold?'✅已售':'📦在庫'}</td>
+                    <td><button onclick="edit('${i.id}')">改</button></td>
+                </tr>`;
+
+            // 手機版卡片
+            mobList.innerHTML += `
+                <div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}" onclick="edit('${i.id}')">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>${i.name}</b>
+                        <small>${catName}</small>
+                    </div>
+                    <div style="font-size:0.9em; margin-top:5px; color:#bbb;">
+                        成本: $${i.purchase} | 
+                        ${isSold ? `售價: $${i.actual} | <span class="profit">利潤: $${profit}</span>` : `預計: $${i.expect}`}
+                    </div>
+                    <div style="text-align:right; font-size:0.8em; margin-top:5px;">
+                        ${isSold ? '✅ 已售出' : '📦 庫存中'}
+                    </div>
+                </div>`;
         });
 
         document.getElementById("count_stock").innerText = sCount;
         document.getElementById("count_sold").innerText = soldCount;
-        document.getElementById("total_profit").innerText = "$" + totalP;
+        document.getElementById("total_profit").innerText = "$" + totalP.toLocaleString();
     }
 
     function edit(id) {
@@ -188,9 +252,9 @@ setTimeout(async () => {
         document.getElementById("in_purchase").value = item.purchase;
         document.getElementById("in_expect").value = item.expect;
         document.getElementById("in_actual").value = item.actual;
-        document.getElementById("in_buyDate").value = item.buyDate;
-        document.getElementById("in_sellDate").value = item.sellDate;
-        window.scrollTo(0,0);
+        document.getElementById("in_buyDate").value = item.buyDate || "";
+        document.getElementById("in_sellDate").value = item.sellDate || "";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 </script>
 </body>
