@@ -153,7 +153,12 @@
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
         let sCount = 0, soldCount = 0, totalP = 0;
         
-        const safeData = data.filter(i => i && i.id).sort((a,b) => String(a.category).localeCompare(String(b.category)));
+        const safeData = data.filter(i => i && i.id).sort((a,b) => {
+            const aSold = Number(a.actual) > 0;
+            const bSold = Number(b.actual) > 0;
+            if (aSold !== bSold) return aSold ? 1 : -1;
+            return String(a.category).localeCompare(String(b.category));
+        });
 
         safeData.forEach(i => {
             const purchase = Number(i.purchase) || 0, actual = Number(i.actual) || 0, expect = Number(i.expect) || 0;
