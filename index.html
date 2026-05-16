@@ -23,6 +23,12 @@
         .btn-main { background: var(--primary); color: white; }
         .btn-reset { background: #444; color: #ccc; max-width: 80px; }
         .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
+        tr.sold { background: #f5f5f5; color: #121212; }
+        tr.sold td { color: #121212; }
+        .card.sold { background: #f5f5f5; color: #121212; border-left-color: #4caf50; }
+        .card.sold small, .card.sold span, .card.sold .btn-del-sm { color: #121212; }
+        .card.sold .btn-del-sm { background: rgba(0,0,0,0.05); border-color: #666; }
+        .mobile-list { display: flex; flex-direction: column; gap: 12px; }
         .desktop-table th, .desktop-table td { padding: 12px; border: 1px solid var(--border); text-align: center; }
         .mobile-list { display: flex; flex-direction: column; gap: 12px; }
         .card { background: var(--card-bg); border-radius: 10px; padding: 15px; border-left: 5px solid var(--primary); position: relative; }
@@ -46,6 +52,33 @@
         <div class="summary-item"><span>在庫</span><b id="count_stock">0</b></div>
         <div class="summary-item"><span>已售</span><b id="count_sold">0</b></div>
         <div class="summary-item"><span>獲利</span><b id="total_profit">$0</b></div>
+    </div>
+
+    <div class="input-group">
+        <div class="input-grid">
+            <div class="input-item"><label>篩選分類</label>
+                <select id="filter_category">
+                    <option value="all">全部</option>
+                    <option value="1_整機">整機</option><option value="2_主機板">主機板</option>
+                    <option value="3_CPU">CPU</option><option value="4_記憶體">記憶體</option>
+                    <option value="5_顯卡">顯卡</option><option value="6_硬碟">硬碟</option>
+                    <option value="7_機殼">機殼</option><option value="8_風扇">風扇</option>
+                    <option value="9_POWER">POWER</option>
+                </select>
+            </div>
+            <div class="input-item"><label>篩選狀態</label>
+                <select id="filter_status">
+                    <option value="all">全部</option>
+                    <option value="stock">在庫</option>
+                    <option value="sold">已售</option>
+                </select>
+            </div>
+            <div class="input-item"><label>關鍵字</label><input id="filter_keyword" placeholder="名稱 / 日期 / 分類"></div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-reset" onclick="clearFilter()">清除篩選</button>
+            <button class="btn btn-main" onclick="render()">套用篩選</button>
+        </div>
     </div>
 
     <div class="input-group">
@@ -151,6 +184,9 @@
         const pcTbody = document.getElementById("pc_tbody");
         const mobList = document.getElementById("mobile_list");
         pcTbody.innerHTML = ""; mobList.innerHTML = "";
+        const filterCategory = document.getElementById("filter_category").value;
+        const filterStatus = document.getElementById("filter_status").value;
+        const keyword = document.getElementById("filter_keyword").value.trim().toLowerCase();
         let sCount = 0, soldCount = 0, totalP = 0;
         
         const safeData = data.filter(i => i && i.id).sort((a,b) => {
@@ -160,18 +196,33 @@
             return String(a.category).localeCompare(String(b.category));
         });
 
-        safeData.forEach(i => {
+        const filteredData = safeData.filter(i => {
+            if (filterCategory !== "all" && i.category !== filterCategory) return false;
+            const isSold = Number(i.actual) > 0;
+            if (filterStatus === "sold" && !isSold) return false;
+            if (filterStatus === "stock" && isSold) return false;
+            if (keyword) {
+                const hay = `${i.name} ${i.category} ${i.buyDate || ""} ${i.sellDate || ""}`.toLowerCase();
+                if (!hay.includes(keyword)) return false;
+            }
+            return true;
+        });
+
+        filteredData.forEach(i => {
             const purchase = Number(i.purchase) || 0, actual = Number(i.actual) || 0, expect = Number(i.expect) || 0;
             const isSold = actual > 0, profit = (isSold ? actual : expect) - purchase;
             if (isSold) { soldCount++; totalP += profit; } else { sCount++; }
             const catName = String(i.category || "").includes('_') ? i.category.split('_')[1] : (i.category || "未分類");
+            const rowClass = isSold ? 'sold' : '';
+            const cardClass = isSold ? 'card sold' : 'card';
+            const cardTextColor = isSold ? '' : '';
 
-            pcTbody.innerHTML += `<tr><td>${catName}</td><td>${i.name}</td><td>$${purchase}</td><td class="${profit>=0?'profit':'loss'}">$${profit}</td><td>${isSold?'✅已售':'📦在庫'}</td>
+            pcTbody.innerHTML += `<tr class="${rowClass}"><td>${catName}</td><td>${i.name}</td><td>$${purchase}</td><td class="${profit>=0?'profit':'loss'}">$${profit}</td><td>${isSold?'✅已售':'📦在庫'}</td>
                 <td><button onclick="edit('${i.id}')">改</button><button onclick="delItem('${i.id}')" style="background:var(--danger);color:white;border:none;margin-left:5px;border-radius:4px;">刪</button></td></tr>`;
 
-            mobList.innerHTML += `<div class="card" style="border-left-color:${isSold?'#4caf50':'#ff9800'}" onclick="edit('${i.id}')">
+            mobList.innerHTML += `<div class="${cardClass}" style="border-left-color:${isSold?'#4caf50':'#ff9800'}" onclick="edit('${i.id}')">
                 <div style="display:flex;justify-content:space-between;"><b>${i.name}</b><small>${catName}</small></div>
-                <div style="font-size:0.9em;margin-top:5px;color:#bbb;">成本:$${purchase} | ${isSold?`售價:$${actual} | <span class="profit">利潤:$${profit}</span>` : `預計:$${expect}`}</div>
+                <div style="font-size:0.9em;margin-top:5px;color:${isSold?'#121212':'#bbb'};">成本:$${purchase} | ${isSold?`售價:$${actual} | <span class="profit">利潤:$${profit}</span>` : `預計:$${expect}`}</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
                     <span style="font-size:0.8em;">${isSold?'✅已售':'📦在庫'}</span>
                     <button class="btn-del-sm" onclick="event.stopPropagation(); delItem('${i.id}')">刪除</button>
@@ -194,6 +245,13 @@
         document.getElementById("in_buyDate").value = item.buyDate || "";
         document.getElementById("in_sellDate").value = item.sellDate || "";
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearFilter() {
+        document.getElementById("filter_category").value = "all";
+        document.getElementById("filter_status").value = "all";
+        document.getElementById("filter_keyword").value = "";
+        render();
     }
 
     function resetForm() {
