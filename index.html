@@ -20,6 +20,13 @@
         input, select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #2c2c2c; color: white; font-size: 16px; }
         .btn-row { display: flex; gap: 10px; margin-top: 15px; }
         .btn { padding: 12px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; flex: 1; }
+        .input-group.compact { padding: 10px; margin-bottom: 12px; }
+        .input-group.compact .input-item { min-width: 0; }
+        .input-group.compact label { font-size: 0.75em; margin-bottom: 3px; }
+        .input-group.compact input, .input-group.compact select { padding: 8px; font-size: 14px; }
+        .input-group.compact .btn-row { margin-top: 10px; }
+        .input-group.compact .btn { padding: 10px 14px; font-size: 14px; }
+        .input-group.compact .btn-reset { max-width: 70px; }
         .btn-main { background: var(--primary); color: white; }
         .btn-reset { background: #444; color: #ccc; max-width: 80px; }
         .desktop-table { width: 100%; border-collapse: collapse; background: var(--card-bg); display: none; margin-top: 20px; }
@@ -54,9 +61,9 @@
         <div class="summary-item"><span>獲利</span><b id="total_profit">$0</b></div>
     </div>
 
-    <div class="input-group">
+    <div class="input-group compact">
         <div class="input-grid">
-            <div class="input-item"><label>篩選分類</label>
+            <div class="input-item"><label>分類</label>
                 <select id="filter_category">
                     <option value="all">全部</option>
                     <option value="1_整機">整機</option><option value="2_主機板">主機板</option>
@@ -66,7 +73,7 @@
                     <option value="9_POWER">POWER</option>
                 </select>
             </div>
-            <div class="input-item"><label>篩選狀態</label>
+            <div class="input-item"><label>狀態</label>
                 <select id="filter_status">
                     <option value="all">全部</option>
                     <option value="stock">在庫</option>
@@ -76,8 +83,8 @@
             <div class="input-item"><label>關鍵字</label><input id="filter_keyword" placeholder="名稱 / 日期 / 分類"></div>
         </div>
         <div class="btn-row">
-            <button class="btn btn-reset" onclick="clearFilter()">清除篩選</button>
-            <button class="btn btn-main" onclick="render()">套用篩選</button>
+            <button class="btn btn-reset" onclick="clearFilter()">清除</button>
+            <button class="btn btn-main" onclick="render()">套用</button>
         </div>
     </div>
 
