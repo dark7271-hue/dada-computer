@@ -60,10 +60,30 @@
         .loss { color: #f44336; font-weight: bold; }
         
         /* 操作按鈕 */
-        .btn-action { background: transparent; color: #ccc; border: 1px solid #555; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 0 2px; }
+        .btn-action { background: transparent; color: #ccc; border: 1px solid #555; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 0 2px; display: inline-flex; white-space: nowrap; }
         .btn-action:hover { background: rgba(255,255,255,0.1); }
         .btn-del { color: #ff5252; border-color: #ff5252; }
         .btn-del:hover { background: rgba(255,82,82,0.1); }
+        td.actions { white-space: nowrap; }
+
+        .desktop-table tbody tr.cat-1 td:first-child { box-shadow: inset 6px 0 0 #4caf50; }
+        .desktop-table tbody tr.cat-2 td:first-child { box-shadow: inset 6px 0 0 #2196f3; }
+        .desktop-table tbody tr.cat-3 td:first-child { box-shadow: inset 6px 0 0 #9c27b0; }
+        .desktop-table tbody tr.cat-4 td:first-child { box-shadow: inset 6px 0 0 #ff9800; }
+        .desktop-table tbody tr.cat-5 td:first-child { box-shadow: inset 6px 0 0 #00bcd4; }
+        .desktop-table tbody tr.cat-6 td:first-child { box-shadow: inset 6px 0 0 #8bc34a; }
+        .desktop-table tbody tr.cat-7 td:first-child { box-shadow: inset 6px 0 0 #795548; }
+        .desktop-table tbody tr.cat-8 td:first-child { box-shadow: inset 6px 0 0 #ff5722; }
+        .desktop-table tbody tr.cat-9 td:first-child { box-shadow: inset 6px 0 0 #e91e63; }
+        .card.cat-1 { border-left-color: #4caf50; }
+        .card.cat-2 { border-left-color: #2196f3; }
+        .card.cat-3 { border-left-color: #9c27b0; }
+        .card.cat-4 { border-left-color: #ff9800; }
+        .card.cat-5 { border-left-color: #00bcd4; }
+        .card.cat-6 { border-left-color: #8bc34a; }
+        .card.cat-7 { border-left-color: #795548; }
+        .card.cat-8 { border-left-color: #ff5722; }
+        .card.cat-9 { border-left-color: #e91e63; }
 
         /* 手機端隱藏（保持響應式架構） */
         .mobile-list { display: none; }
@@ -80,27 +100,19 @@
 </head>
 <body>
 <div class="container">
-    
-    <div class="header-row">
-        <h2>電腦翻修進銷存 V5.2</h2>
-
-    </div>
-
-
-
     <div class="form-grid">
         <div class="form-item">
             <label>分類</label>
             <select id="in_category">
-                <option value="1_整機">1_整機</option>
-                <option value="2_主機板">2_主機板</option>
-                <option value="3_顯卡">3_顯卡</option>
-                <option value="4_CPU">4_CPU</option>
-                <option value="5_主機板">5_主機板</option>
-                <option value="6_記憶體">6_記憶體</option>
-                <option value="7_硬碟">7_硬碟</option>
-                <option value="8_風扇">8_風扇</option>
-                <option value="9_POWER">9_POWER</option>
+                <option value="1_整機">整機</option>
+                <option value="2_主機板">主機板</option>
+                <option value="3_顯卡">顯卡</option>
+                <option value="4_CPU">CPU</option>
+                <option value="5_顯卡">顯卡</option>
+                <option value="6_記憶體">記憶體</option>
+                <option value="7_硬碟">硬碟</option>
+                <option value="8_風扇">風扇</option>
+                <option value="9_POWER">POWER</option>
             </select>
         </div>
         <div class="form-item">
@@ -154,12 +166,15 @@
     <table class="desktop-table">
         <thead>
             <tr>
-                <th style="width: 15%;">分類</th>
-                <th style="width: 35%;">名稱</th>
-                <th style="width: 12%;">成本</th>
-                <th style="width: 12%;">利潤</th>
-                <th style="width: 12%;">狀態</th>
-                <th style="width: 14%;">操作</th>
+                <th style="width: 10%;">分類</th>
+                <th style="width: 30%;">名稱</th>
+                <th style="width: 10%;">成本</th>
+                <th style="width: 10%;">買入日期</th>
+                <th style="width: 10%;">賣出日期</th>
+                <th style="width: 10%;">實際售價</th>
+                <th style="width: 10%;">利潤</th>
+                <th style="width: 10%;">狀態</th>
+                <th style="width: 10%;">操作</th>
             </tr>
         </thead>
         <tbody id="pc_tbody"></tbody>
@@ -255,25 +270,30 @@
             if (isSold) { soldCount++; totalP += profit; } else { sCount++; }
             
             const catName = String(i.category || "").includes('_') ? i.category.split('_')[1] : (i.category || "未分類");
-            const rowClass = isSold ? 'sold-row' : '';
+        const catCode = String(i.category || "").split('_')[0] || '0';
+            const rowClass = `${isSold ? 'sold-row' : ''} cat-${catCode}`.trim();
             const statusStr = isSold ? '📦 已售' : '📦 在庫';
 
             // 桌機表格渲染
             pcTbody.innerHTML += `<tr class="${rowClass}">
-                <td>${i.category}</td>
+                <td>${catName}</td>
                 <td style="text-align: left; padding-left: 20px;">${i.name}</td>
                 <td>$${purchase}</td>
+                <td>${formatDate(i.buyDate)}</td>
+                <td>${formatDate(i.sellDate)}</td>
+                <td>$${actual}</td>
                 <td class="${profit>=0?'profit':'loss'}">$${profit}</td>
                 <td>${statusStr}</td>
-                <td>
+                <td class="actions">
                     <button class="btn-action" onclick="edit('${i.id}')">修改</button>
                     <button class="btn-action btn-del" onclick="delItem('${i.id}')">刪除</button>
                 </td>
             </tr>`;
 
             // 手機版渲染
-            mobList.innerHTML += `<div class="card ${isSold?'sold-card':''}" onclick="edit('${i.id}')">
+            mobList.innerHTML += `<div class="card ${isSold?'sold-card':''} cat-${catCode}" onclick="edit('${i.id}')">
                 <div style="display:flex;justify-content:space-between;"><b>${i.name}</b><small>${catName}</small></div>
+                <div class="meta">買入:${formatDate(i.buyDate)} | 賣出:${formatDate(i.sellDate)}</div>
                 <div style="font-size:0.9em;margin-top:5px;">成本:$${purchase} | ${isSold?`售價:$${actual} | 利潤:$${profit}` : `預計:$${expect}`}</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
                     <span style="font-size:0.8em;">${statusStr}</span>
@@ -284,6 +304,17 @@
         document.getElementById("count_stock").innerText = sCount;
         document.getElementById("count_sold").innerText = soldCount;
         document.getElementById("total_profit").innerText = "$" + totalP.toLocaleString();
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const datePart = String(value).split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+        const parsed = new Date(value);
+        if (!isNaN(parsed)) {
+            return parsed.toISOString().split('T')[0];
+        }
+        return value;
     }
 
     function edit(id) {
